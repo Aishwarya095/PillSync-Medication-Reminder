@@ -29,3 +29,4 @@ def check_health(db: Session = Depends(get_db)):
         "database": db_status,
         "database_type": "sqlite" if "sqlite" in settings.DATABASE_URL else "postgresql",
     }
+
