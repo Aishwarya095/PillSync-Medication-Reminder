@@ -28,9 +28,6 @@ function AppRoutes() {
       <Navbar />
 
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
-        {/* System Heartbeat & API Health Indicator */}
-        <HealthStatus />
-
         {/* Application Navigation Routes */}
         <Routes>
           {/* Public Routes */}
@@ -60,8 +57,24 @@ function AppRoutes() {
       </main>
 
       <footer className="border-t border-slate-200 bg-white py-4 mt-auto">
-        <div className="max-w-7xl mx-auto px-4 text-center text-xs text-slate-400">
-          PillSync © 2026 • AI-Driven Medication Recognition & Personalized Reminder Platform • Milestone 1
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-slate-400">
+          <div>
+            PillSync © 2026 • AI-Driven Medication Recognition & Personalized Reminder Platform • Milestone 1
+          </div>
+          <div className="flex items-center space-x-3 text-[11px]">
+            <span className="flex items-center space-x-1.5 text-emerald-600 font-semibold">
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+              <span>FastAPI & SQLite Live</span>
+            </span>
+            <a
+              href="http://127.0.0.1:8000/docs"
+              target="_blank"
+              rel="noreferrer"
+              className="text-blue-600 hover:text-blue-700 underline font-medium"
+            >
+              Swagger Docs
+            </a>
+          </div>
         </div>
       </footer>
     </div>
