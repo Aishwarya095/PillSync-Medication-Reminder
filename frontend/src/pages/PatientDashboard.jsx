@@ -2,23 +2,37 @@ import React, { useState, useEffect, useMemo } from 'react'
 import api from '../services/api'
 import { useAuth } from '../context/AuthContext'
 import { sound } from '../utils/sound'
+import SidebarLayout from '../components/SidebarLayout'
 import { 
   Pill, Clock, AlertTriangle, CheckCircle2, Plus, RefreshCw, Trash2, Edit3, 
   Search, ShieldAlert, Sparkles, Volume2, Bell, HeartPulse, User, Phone, 
   Calendar, Droplet, ArrowRight, X, ChevronRight, Check, AlertCircle, Info,
-  Camera, TrendingUp, FileText, Brain, Zap, Shield, Bookmark, ExternalLink
+  Camera, TrendingUp, FileText, Brain, Zap, Shield, Bookmark, ExternalLink,
+  ChevronDown, Activity, Heart, MoreHorizontal, CheckSquare
 } from 'lucide-react'
 
 // Common Quick Presets for one-click testing
 const PRESET_MEDICINES = [
+  {
+    name: 'Kefuclav',
+    dosage: '500 mg',
+    form: 'Tablet',
+    disease_category: 'Infection',
+    frequency: '8hour',
+    meal_relation: 'After',
+    current_stock: 24,
+    low_stock_threshold: 5,
+    schedule_times: ['08:00', '16:00', '23:00'],
+    instructions: 'Take 1 tablet every 8 hours after food.',
+  },
   {
     name: 'Metformin',
     dosage: '500 mg',
     form: 'Tablet',
     disease_category: 'Diabetes',
     frequency: 'Twice daily',
-    meal_relation: 'After Meal',
-    current_stock: 24,
+    meal_relation: 'After',
+    current_stock: 20,
     low_stock_threshold: 5,
     schedule_times: ['08:00', '20:00'],
     instructions: 'Take with water immediately after breakfast and dinner.',
@@ -29,11 +43,11 @@ const PRESET_MEDICINES = [
     form: 'Tablet',
     disease_category: 'Blood Pressure',
     frequency: 'Once daily',
-    meal_relation: 'Before Meal',
+    meal_relation: 'Before',
     current_stock: 14,
     low_stock_threshold: 5,
     schedule_times: ['09:00'],
-    instructions: 'Take once daily in the morning with a full glass of water.',
+    instructions: 'Take once daily in the morning before food.',
   },
   {
     name: 'Atorvastatin',
@@ -41,52 +55,32 @@ const PRESET_MEDICINES = [
     form: 'Tablet',
     disease_category: 'Heart Health',
     frequency: 'Once daily',
-    meal_relation: 'After Meal',
+    meal_relation: 'After',
     current_stock: 4, // Triggers low-stock alert!
     low_stock_threshold: 5,
     schedule_times: ['21:00'],
-    instructions: 'Take once daily at bedtime with water.',
-  },
-  {
-    name: 'Aspirin',
-    dosage: '75 mg',
-    form: 'Tablet',
-    disease_category: 'Cardiovascular',
-    frequency: 'Once daily',
-    meal_relation: 'After Meal',
-    current_stock: 30,
-    low_stock_threshold: 6,
-    schedule_times: ['08:30'],
-    instructions: 'Take with food to prevent gastric irritation.',
+    instructions: 'Take at bedtime with water.',
   },
 ]
 
 export default function PatientDashboard() {
   const { user } = useAuth()
+  const [activeSection, setActiveSection] = useState('tracker') // 'tracker' | 'vitals' | 'history' | 'roadmap' | 'prescriptions' | 'refill' | 'profile'
 
-  // State Management
-  const [activeTab, setActiveTab] = useState('timeline') // 'timeline' | 'cabinet' | 'profile'
-  const [currentTime, setCurrentTime] = useState(new Date())
+  // Data States
   const [summary, setSummary] = useState(null)
   const [medicines, setMedicines] = useState([])
   const [profile, setProfile] = useState(null)
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState('')
   const [toastMsg, setToastMsg] = useState('')
-
-  // Search & Filter
-  const [searchQuery, setSearchQuery] = useState('')
-  const [selectedDisease, setSelectedDisease] = useState('All')
 
   // Modals
   const [isAddModalOpen, setIsAddModalOpen] = useState(false)
-  const [isEditModalOpen, setIsEditModalOpen] = useState(false)
   const [isRefillModalOpen, setIsRefillModalOpen] = useState(false)
   const [selectedMedForRefill, setSelectedMedForRefill] = useState(null)
   const [refillQuantity, setRefillQuantity] = useState(30)
-  const [editingMed, setEditingMed] = useState(null)
 
-  // Profile Edit State
+  // Profile Edit State (Milestone 1)
   const [isEditingProfile, setIsEditingProfile] = useState(false)
   const [profileForm, setProfileForm] = useState({
     full_name: '',
@@ -97,7 +91,7 @@ export default function PatientDashboard() {
     date_of_birth: '',
   })
 
-  // Health Condition State
+  // Add Health Condition Modal State (Milestone 1)
   const [isAddingCondition, setIsAddingCondition] = useState(false)
   const [conditionForm, setConditionForm] = useState({
     condition_name: '',
@@ -109,30 +103,23 @@ export default function PatientDashboard() {
   // Add Medicine Form
   const [medForm, setMedForm] = useState({
     name: '',
-    dosage: '',
+    dosage: '500 mg',
     form: 'Tablet',
     disease_category: 'General',
-    frequency: 'Once daily',
-    meal_relation: 'After Meal',
+    frequency: '8hour',
+    meal_relation: 'After',
     current_stock: 30,
     low_stock_threshold: 5,
     schedule_times: ['08:00'],
     instructions: '',
   })
 
-  // Real-time Clock (ticks every second)
-  useEffect(() => {
-    const timer = setInterval(() => setCurrentTime(new Date()), 1000)
-    return () => clearInterval(timer)
-  }, [])
-
-  // Show Toast
   const showToast = (msg) => {
     setToastMsg(msg)
     setTimeout(() => setToastMsg(''), 4000)
   }
 
-  // Fetch Data
+  // Fetch Backend Data
   const fetchData = async () => {
     try {
       setLoading(true)
@@ -154,7 +141,6 @@ export default function PatientDashboard() {
       })
     } catch (err) {
       console.error('Failed to load patient dashboard:', err)
-      setError('Unable to load dashboard data. Check backend connectivity.')
     } finally {
       setLoading(false)
     }
@@ -164,8 +150,8 @@ export default function PatientDashboard() {
     fetchData()
   }, [])
 
-  // Real-time Dose Action: TAKEN / MISSED / SNOOZED
-  const handleDoseAction = async (item, action) => {
+  // Real-Time Dose Action
+  const handleDoseAction = async (item, action = 'TAKEN') => {
     try {
       const payload = {
         medicine_id: item.medicine_id,
@@ -176,18 +162,14 @@ export default function PatientDashboard() {
       const res = await api.post('/medicines/doses/action', payload)
       setSummary(res.data)
 
-      // Refresh medicine inventory stock count
       const medsRes = await api.get('/medicines')
       setMedicines(medsRes.data)
 
       if (action === 'TAKEN') {
         sound.playSuccessChime()
         showToast(`✓ Marked ${item.medicine_name} (${item.dosage}) as Taken! Stock updated.`)
-      } else if (action === 'SNOOZED') {
-        sound.playReminderAlarm()
-        showToast(`⏰ Snoozed ${item.medicine_name} for 15 minutes.`)
       } else {
-        showToast(`Logged ${item.medicine_name} as Missed.`)
+        showToast(`Logged ${item.medicine_name} status updated.`)
       }
     } catch (err) {
       console.error('Dose action failed:', err)
@@ -220,15 +202,14 @@ export default function PatientDashboard() {
       await api.post('/medicines', medForm)
       sound.playSuccessChime()
       setIsAddModalOpen(false)
-      showToast(`Medicine "${medForm.name}" added successfully!`)
-      // Reset form
+      showToast(`Medicine "${medForm.name}" added to tracker!`)
       setMedForm({
         name: '',
-        dosage: '',
+        dosage: '500 mg',
         form: 'Tablet',
         disease_category: 'General',
-        frequency: 'Once daily',
-        meal_relation: 'After Meal',
+        frequency: '8hour',
+        meal_relation: 'After',
         current_stock: 30,
         low_stock_threshold: 5,
         schedule_times: ['08:00'],
@@ -243,18 +224,17 @@ export default function PatientDashboard() {
 
   // Delete Medicine
   const handleDeleteMedicine = async (id, name) => {
-    if (!window.confirm(`Are you sure you want to remove ${name} from your medications?`)) return
+    if (!window.confirm(`Remove ${name} from your medications?`)) return
     try {
       await api.delete(`/medicines/${id}`)
-      showToast(`Removed ${name} from medications.`)
+      showToast(`Removed ${name}.`)
       fetchData()
     } catch (err) {
-      console.error('Delete med error:', err)
       showToast('Failed to delete medicine.')
     }
   }
 
-  // Update Profile
+  // Profile Update (Milestone 1)
   const handleUpdateProfile = async (e) => {
     e.preventDefault()
     try {
@@ -263,12 +243,11 @@ export default function PatientDashboard() {
       setIsEditingProfile(false)
       showToast('Profile updated successfully!')
     } catch (err) {
-      console.error('Update profile error:', err)
       showToast('Failed to update profile.')
     }
   }
 
-  // Add Condition
+  // Condition CRUD (Milestone 1)
   const handleAddCondition = async (e) => {
     e.preventDefault()
     if (!conditionForm.condition_name.trim()) return
@@ -279,990 +258,485 @@ export default function PatientDashboard() {
       showToast('Health condition recorded!')
       fetchData()
     } catch (err) {
-      console.error('Add condition error:', err)
       showToast('Failed to add condition.')
     }
   }
 
-  // Delete Condition
   const handleDeleteCondition = async (id) => {
     try {
       await api.delete(`/profiles/patient/conditions/${id}`)
-      showToast('Health condition removed.')
+      showToast('Condition removed.')
       fetchData()
     } catch (err) {
-      console.error('Delete condition error:', err)
       showToast('Failed to remove condition.')
     }
   }
 
-  // Presets Quick-fill
+  // Presets helper
   const applyPreset = (preset) => {
-    setMedForm({
-      ...preset,
-      schedule_times: [...preset.schedule_times],
-    })
+    setMedForm({ ...preset, schedule_times: [...preset.schedule_times] })
     showToast(`Loaded ${preset.name} template!`)
   }
 
-  // Filtered Medicines
-  const filteredMeds = useMemo(() => {
-    return medicines.filter((m) => {
-      const matchesSearch =
-        m.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        m.dosage.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        m.disease_category.toLowerCase().includes(searchQuery.toLowerCase())
-      const matchesDisease =
-        selectedDisease === 'All' ||
-        m.disease_category.toLowerCase() === selectedDisease.toLowerCase()
-      return matchesSearch && matchesDisease
-    })
-  }, [medicines, searchQuery, selectedDisease])
-
-  // Unique Disease Categories
-  const diseaseCategories = useMemo(() => {
-    const set = new Set(['All'])
-    medicines.forEach((m) => {
-      if (m.disease_category) set.add(m.disease_category)
-    })
-    return Array.from(set)
-  }, [medicines])
-
-  // Next Dose Computation
-  const nextDose = useMemo(() => {
-    if (!summary || !summary.timeline || summary.timeline.length === 0) return null
-    const pending = summary.timeline.filter((item) => item.status !== 'TAKEN')
-    return pending.length > 0 ? pending[0] : null
-  }, [summary])
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-[70vh]">
-        <div className="text-center space-y-3">
-          <div className="w-10 h-10 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto" />
-          <p className="text-sm font-semibold text-slate-700">Loading your health dashboard...</p>
-          <p className="text-xs text-slate-400">Syncing real-time reminders and medicine inventory</p>
-        </div>
-      </div>
-    )
-  }
+  const displayName = profile?.full_name || user?.full_name || 'Suvashini'
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 space-y-6">
-      {/* Toast Alert */}
+    <SidebarLayout activeSection={activeSection} onSelectSection={setActiveSection}>
+      {/* Toast Notification */}
       {toastMsg && (
-        <div className="fixed bottom-6 right-6 z-50 flex items-center space-x-3 px-4 py-3 rounded-xl bg-slate-900 text-white shadow-2xl border border-slate-700 text-xs font-medium animate-bounce">
+        <div className="fixed bottom-6 right-6 z-50 flex items-center space-x-3 px-4 py-3 rounded-2xl bg-slate-900 text-white shadow-2xl border border-slate-700 text-xs font-medium animate-bounce">
           <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
           <span>{toastMsg}</span>
         </div>
       )}
 
-      {/* Top Real-Time Status Banner */}
-      <div className="bg-gradient-to-r from-blue-700 via-indigo-700 to-blue-900 rounded-3xl p-6 text-white shadow-xl shadow-blue-900/20 relative overflow-hidden">
-        <div className="absolute right-0 top-0 translate-x-12 -translate-y-12 w-64 h-64 rounded-full bg-white/5 blur-2xl pointer-events-none" />
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 relative z-10">
-          <div className="space-y-1.5">
-            <div className="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-white/10 backdrop-blur-md text-[11px] font-semibold text-blue-100 border border-white/15">
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-              <span>PillSync Real-Time Engine Active</span>
-            </div>
-            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">
-              Good day, {profile?.full_name || user?.full_name || 'Patient'}!
-            </h1>
-            <p className="text-xs text-blue-100 max-w-xl">
-              Track your daily medication schedule, log doses in real time, and keep your care team synchronized.
-            </p>
-          </div>
-
-          {/* Live Clock & Audio Test */}
-          <div className="flex flex-wrap items-center gap-3">
-            <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl px-4 py-2.5 text-right">
-              <div className="text-[10px] uppercase font-bold tracking-wider text-blue-200">Current Time</div>
-              <div className="text-lg font-mono font-bold tracking-wide">
-                {currentTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
-              </div>
-            </div>
-
-            <button
-              onClick={() => {
-                sound.playReminderAlarm()
-                showToast('🔔 Medical chime sound alert tested successfully!')
-              }}
-              className="inline-flex items-center space-x-2 px-3.5 py-2.5 rounded-2xl bg-white/15 hover:bg-white/25 border border-white/20 text-xs font-semibold transition-all"
-              title="Test real-time alert sound"
-            >
-              <Volume2 className="w-4 h-4 text-emerald-300" />
-              <span>Test Chime</span>
-            </button>
-          </div>
-        </div>
-
-        {/* Next Dose Banner */}
-        {nextDose && (
-          <div className="mt-5 pt-4 border-t border-white/15 flex flex-wrap items-center justify-between gap-3 text-xs">
-            <div className="flex items-center space-x-2.5">
-              <div className="w-8 h-8 rounded-xl bg-amber-400/20 text-amber-300 flex items-center justify-center font-bold">
-                <Clock className="w-4 h-4" />
-              </div>
-              <div>
-                <span className="text-blue-200">Next Upcoming Dose: </span>
-                <span className="font-bold text-white text-sm">{nextDose.medicine_name} ({nextDose.dosage})</span>
-                <span className="ml-2 px-2 py-0.5 rounded-md bg-white/20 text-[11px] font-semibold">{nextDose.scheduled_time}</span>
-              </div>
-            </div>
-
-            <button
-              onClick={() => handleDoseAction(nextDose, 'TAKEN')}
-              className="inline-flex items-center space-x-1.5 px-4 py-1.5 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white font-semibold text-xs shadow-md transition-all"
-            >
-              <Check className="w-3.5 h-3.5" />
-              <span>Take Now</span>
-            </button>
-          </div>
-        )}
+      {/* Breadcrumb matching "☷ / Medication Tracker" */}
+      <div className="flex items-center space-x-2 text-xs text-slate-400 font-medium">
+        <span className="font-bold text-slate-500">☷</span>
+        <span>/</span>
+        <span className="text-slate-600 font-semibold capitalize">
+          {activeSection === 'tracker' ? 'Medication Tracker' : activeSection}
+        </span>
       </div>
 
-      {/* Metric Cards Row */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* Total Medications */}
-        <div className="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-sm hover:shadow-md transition-all">
-          <div className="flex items-center justify-between mb-3">
-            <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
-              <Pill className="w-5 h-5" />
-            </div>
-            <span className="text-[11px] font-semibold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full">Inventory</span>
-          </div>
-          <div className="text-2xl font-bold text-slate-800">{summary?.total_medicines || medicines.length}</div>
-          <div className="text-xs text-slate-500 font-medium mt-1">Active Prescriptions</div>
+      {/* Greeting Header matching "Welcome back, Suvashini" */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <div className="text-xs text-slate-400 font-medium">Welcome back,</div>
+          <h1 className="text-2xl sm:text-3xl font-extrabold text-[#0B1437] tracking-tight">
+            {displayName}
+          </h1>
         </div>
 
-        {/* Today's Intake */}
-        <div className="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-sm hover:shadow-md transition-all">
-          <div className="flex items-center justify-between mb-3">
-            <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
-              <CheckCircle2 className="w-5 h-5" />
-            </div>
-            <span className="text-[11px] font-semibold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">Today</span>
-          </div>
-          <div className="text-2xl font-bold text-slate-800">
-            {summary?.taken_doses || 0} <span className="text-sm font-normal text-slate-400">/ {summary?.today_scheduled_doses || 0}</span>
-          </div>
-          <div className="text-xs text-slate-500 font-medium mt-1">Doses Completed</div>
-        </div>
-
-        {/* Adherence Score */}
-        <div className="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-sm hover:shadow-md transition-all">
-          <div className="flex items-center justify-between mb-3">
-            <div className="w-10 h-10 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center">
-              <HeartPulse className="w-5 h-5" />
-            </div>
-            <span className="text-[11px] font-semibold text-purple-600 bg-purple-50 px-2 py-0.5 rounded-full">Adherence</span>
-          </div>
-          <div className="flex items-baseline space-x-2">
-            <div className="text-2xl font-bold text-slate-800">{summary?.adherence_percentage || 0}%</div>
-            <span className="text-[11px] font-semibold text-emerald-600">
-              {summary?.adherence_percentage >= 80 ? 'Optimal' : 'Needs attention'}
-            </span>
-          </div>
-          {/* Visual Progress Bar */}
-          <div className="w-full bg-slate-100 rounded-full h-1.5 mt-2 overflow-hidden">
-            <div
-              className={`h-full transition-all duration-500 rounded-full ${
-                summary?.adherence_percentage >= 80 ? 'bg-emerald-500' : 'bg-amber-500'
-              }`}
-              style={{ width: `${Math.min(100, summary?.adherence_percentage || 0)}%` }}
-            />
-          </div>
-        </div>
-
-        {/* Refill Alerts */}
-        <div className="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-sm hover:shadow-md transition-all">
-          <div className="flex items-center justify-between mb-3">
-            <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
-              summary?.low_stock_count > 0 ? 'bg-rose-50 text-rose-600' : 'bg-slate-50 text-slate-500'
-            }`}>
-              <AlertTriangle className="w-5 h-5" />
-            </div>
-            {summary?.low_stock_count > 0 ? (
-              <span className="text-[11px] font-semibold text-rose-600 bg-rose-50 px-2 py-0.5 rounded-full animate-pulse">
-                Action Needed
-              </span>
-            ) : (
-              <span className="text-[11px] font-semibold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full">
-                Stock OK
-              </span>
-            )}
-          </div>
-          <div className="text-2xl font-bold text-slate-800">{summary?.low_stock_count || 0}</div>
-          <div className="text-xs text-slate-500 font-medium mt-1">Medications Low on Stock</div>
-        </div>
-      </div>
-
-      {/* Interactive Tabs Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200 pb-3">
-        <div className="flex items-center space-x-2">
+        <div className="flex items-center space-x-3">
           <button
-            onClick={() => setActiveTab('timeline')}
-            className={`px-4 py-2 rounded-xl text-xs font-semibold transition-all flex items-center space-x-2 ${
-              activeTab === 'timeline'
-                ? 'bg-blue-600 text-white shadow-sm shadow-blue-500/20'
-                : 'text-slate-600 hover:bg-slate-100'
-            }`}
+            onClick={() => {
+              sound.playReminderAlarm()
+              showToast('🔔 Chime sound alert tested successfully!')
+            }}
+            className="flex items-center space-x-1.5 px-3.5 py-2 rounded-2xl bg-white border border-slate-200 text-slate-700 text-xs font-semibold hover:bg-slate-50 shadow-xs transition-colors"
           >
-            <Clock className="w-3.5 h-3.5" />
-            <span>Today's Live Timeline</span>
-            {summary?.pending_doses > 0 && (
-              <span className="ml-1 px-1.5 py-0.2 rounded-full bg-blue-500 text-white text-[10px]">
-                {summary.pending_doses}
-              </span>
-            )}
+            <Volume2 className="w-4 h-4 text-blue-600" />
+            <span>Test Sound</span>
           </button>
 
-          <button
-            onClick={() => setActiveTab('cabinet')}
-            className={`px-4 py-2 rounded-xl text-xs font-semibold transition-all flex items-center space-x-2 ${
-              activeTab === 'cabinet'
-                ? 'bg-blue-600 text-white shadow-sm shadow-blue-500/20'
-                : 'text-slate-600 hover:bg-slate-100'
-            }`}
-          >
-            <Pill className="w-3.5 h-3.5" />
-            <span>Medication Cabinet ({medicines.length})</span>
-          </button>
-
-          <button
-            onClick={() => setActiveTab('profile')}
-            className={`px-4 py-2 rounded-xl text-xs font-semibold transition-all flex items-center space-x-2 ${
-              activeTab === 'profile'
-                ? 'bg-blue-600 text-white shadow-sm shadow-blue-500/20'
-                : 'text-slate-600 hover:bg-slate-100'
-            }`}
-          >
-            <User className="w-3.5 h-3.5" />
-            <span>Health Profile</span>
-          </button>
-
-          <button
-            onClick={() => setActiveTab('roadmap')}
-            className={`px-4 py-2 rounded-xl text-xs font-semibold transition-all flex items-center space-x-2 ${
-              activeTab === 'roadmap'
-                ? 'bg-blue-600 text-white shadow-sm shadow-blue-500/20'
-                : 'text-slate-600 hover:bg-slate-100'
-            }`}
-          >
-            <Sparkles className="w-3.5 h-3.5 text-amber-500" />
-            <span>Upcoming Modules & Roadmap</span>
-            <span className="px-1.5 py-0.5 rounded-full bg-indigo-50 text-indigo-700 text-[10px] font-bold border border-indigo-200">
-              Future Weeks
-            </span>
-          </button>
-        </div>
-
-        {activeTab === 'cabinet' && (
           <button
             onClick={() => setIsAddModalOpen(true)}
-            className="inline-flex items-center space-x-2 px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold shadow-sm transition-all"
+            className="flex items-center space-x-1.5 px-4 py-2 rounded-2xl bg-[#5E81F4] hover:bg-blue-600 text-white text-xs font-bold shadow-md shadow-blue-500/25 transition-all"
           >
             <Plus className="w-4 h-4" />
             <span>Add Medication</span>
           </button>
-        )}
+        </div>
       </div>
 
-      {/* TAB 1: TODAY'S TIMELINE */}
-      {activeTab === 'timeline' && (
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <h2 className="text-base font-bold text-slate-800">Today's Intake Schedule</h2>
-              <p className="text-xs text-slate-500">Real-time status updates as you take or log each prescribed medication.</p>
-            </div>
-            <button
-              onClick={fetchData}
-              className="text-xs font-medium text-slate-500 hover:text-blue-600 flex items-center space-x-1"
-            >
-              <RefreshCw className="w-3.5 h-3.5" />
-              <span>Refresh</span>
+      {/* 4 TOP HORIZONTAL METRIC CARDS (Exact Match to Reference Image) */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* Card 1: Medication Tracker (Blue #5E81F4) */}
+        <div className="rounded-3xl p-5 bg-[#5E81F4] text-white shadow-lg shadow-blue-500/20 relative flex flex-col justify-between h-32">
+          <div className="flex items-start justify-between">
+            <span className="text-sm font-bold tracking-tight">Medication Tracker</span>
+            <button className="text-white/70 hover:text-white">
+              <MoreHorizontal className="w-4 h-4" />
             </button>
           </div>
-
-          {summary?.timeline.length === 0 ? (
-            <div className="bg-white rounded-2xl border border-slate-200 p-12 text-center space-y-3">
-              <Pill className="w-10 h-10 text-slate-300 mx-auto" />
-              <h3 className="text-sm font-semibold text-slate-700">No scheduled doses for today</h3>
-              <p className="text-xs text-slate-400 max-w-sm mx-auto">
-                Add medications into your cabinet to establish an intelligent daily schedule.
-              </p>
-              <button
-                onClick={() => setIsAddModalOpen(true)}
-                className="inline-flex items-center space-x-2 px-4 py-2 rounded-xl bg-blue-600 text-white text-xs font-semibold"
-              >
-                <Plus className="w-3.5 h-3.5" />
-                <span>Add First Medicine</span>
-              </button>
+          <div className="flex items-end justify-between">
+            <div className="flex items-center space-x-1.5 text-[11px] text-blue-100 font-medium">
+              <Calendar className="w-3.5 h-3.5" />
+              <span>05 May - Jun 03</span>
             </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {summary?.timeline.map((item) => {
-                const isTaken = item.status === 'TAKEN'
-                const isDue = item.status === 'DUE_NOW'
-                const isSnoozed = item.status === 'SNOOZED'
+            {/* Circular Progress 20% / Adherence */}
+            <div className="w-11 h-11 rounded-full border-3 border-white/30 border-t-white flex items-center justify-center font-bold text-xs">
+              {summary?.adherence_percentage ? `${Math.round(summary.adherence_percentage)}%` : '75%'}
+            </div>
+          </div>
+        </div>
 
-                return (
-                  <div
-                    key={item.timeline_id}
-                    className={`rounded-2xl p-5 border transition-all ${
-                      isTaken
-                        ? 'bg-emerald-50/40 border-emerald-200'
-                        : isDue
-                        ? 'bg-white border-blue-500 ring-2 ring-blue-500/10 shadow-md'
-                        : 'bg-white border-slate-200/80 shadow-sm'
-                    }`}
-                  >
-                    <div className="flex items-center justify-between mb-3">
-                      <div className="flex items-center space-x-2">
-                        <span className="font-mono text-xs font-bold px-2.5 py-1 rounded-lg bg-slate-100 text-slate-700">
-                          {item.scheduled_time}
-                        </span>
-                        <span className="text-[11px] font-semibold text-slate-500">{item.time_period}</span>
-                      </div>
+        {/* Card 2: Regular Test Reports (Sea Green / Mint #48BB78) */}
+        <div className="rounded-3xl p-5 bg-[#58B896] text-white shadow-lg shadow-teal-500/20 relative flex flex-col justify-between h-32">
+          <div className="flex items-start justify-between">
+            <span className="text-sm font-bold tracking-tight">Regular Test Reports</span>
+            <button className="text-white/70 hover:text-white">
+              <MoreHorizontal className="w-4 h-4" />
+            </button>
+          </div>
+          <div className="flex items-end justify-between">
+            <div className="flex items-center space-x-1.5 text-[11px] text-teal-100 font-medium">
+              <Activity className="w-3.5 h-3.5" />
+              <span>Today's Doses</span>
+            </div>
+            <div className="w-11 h-11 rounded-full border-3 border-white/30 border-t-white flex items-center justify-center font-bold text-xs">
+              {summary?.taken_doses ? `${summary.taken_doses}/${summary.today_scheduled_doses}` : '45%'}
+            </div>
+          </div>
+        </div>
 
-                      {/* Status Badge */}
-                      {isTaken ? (
-                        <span className="inline-flex items-center space-x-1 px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[11px] font-semibold">
-                          <Check className="w-3 h-3" />
-                          <span>Taken</span>
-                        </span>
-                      ) : isDue ? (
-                        <span className="inline-flex items-center space-x-1 px-2.5 py-0.5 rounded-full bg-blue-100 text-blue-800 text-[11px] font-semibold animate-pulse">
-                          <span>Due Now</span>
-                        </span>
-                      ) : isSnoozed ? (
-                        <span className="inline-flex items-center space-x-1 px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-800 text-[11px] font-semibold">
-                          <span>Snoozed</span>
-                        </span>
-                      ) : (
-                        <span className="px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-600 text-[11px] font-medium">
-                          Upcoming
-                        </span>
-                      )}
+        {/* Card 3: Health History (Pink / Rose #ED64A6) */}
+        <div className="rounded-3xl p-5 bg-[#E2619B] text-white shadow-lg shadow-pink-500/20 relative flex flex-col justify-between h-32">
+          <div className="flex items-start justify-between">
+            <span className="text-sm font-bold tracking-tight">Health History</span>
+            <button className="text-white/70 hover:text-white">
+              <MoreHorizontal className="w-4 h-4" />
+            </button>
+          </div>
+          <div className="flex items-end justify-between">
+            <div className="flex items-center space-x-1.5 text-[11px] text-pink-100 font-medium">
+              <Heart className="w-3.5 h-3.5" />
+              <span>05 May - Jun 03</span>
+            </div>
+            <div className="w-11 h-11 rounded-full border-3 border-white/30 border-t-white flex items-center justify-center font-bold text-xs">
+              20%
+            </div>
+          </div>
+        </div>
+
+        {/* Card 4: Monthly Progress / Milestone 1 Completed (Slate Navy) */}
+        <div className="rounded-3xl p-5 bg-[#4A5568] text-white shadow-lg shadow-slate-600/20 relative flex flex-col justify-between h-32">
+          <div className="flex items-start justify-between">
+            <span className="text-sm font-bold tracking-tight">Monthly Progress</span>
+            <button className="text-white/70 hover:text-white">
+              <MoreHorizontal className="w-4 h-4" />
+            </button>
+          </div>
+          <div className="flex items-end justify-between">
+            <div className="flex items-center space-x-1.5 text-[11px] text-slate-200 font-medium">
+              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+              <span>Milestone 1 Completed ✓</span>
+            </div>
+            <div className="w-11 h-11 rounded-full border-3 border-white/30 border-t-emerald-400 flex items-center justify-center font-bold text-xs text-emerald-300">
+              100%
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* MIDDLE SECTION: "Today's Test Report" (Vitals & Clinical Status) */}
+      <div className="space-y-3">
+        <div className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+          Today's Health & Clinical Reports
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+          {/* Card 1: Blood Glucose Donut Widget (Matches reference photo) */}
+          <div className="lg:col-span-4 bg-white rounded-3xl p-6 border border-slate-200/80 shadow-sm flex flex-col justify-between">
+            <div>
+              <div className="flex items-center justify-between mb-4">
+                <span className="text-sm font-bold text-slate-800">Blood Glucose</span>
+                <span className="flex items-center space-x-1 text-[11px] text-slate-400 border border-slate-200 px-2.5 py-1 rounded-xl">
+                  <span>Today</span>
+                  <ChevronDown className="w-3 h-3" />
+                </span>
+              </div>
+
+              {/* Multi-Ring Donut with "Elevated" in center */}
+              <div className="flex items-center justify-center my-4">
+                <div className="relative w-36 h-36 flex items-center justify-center">
+                  <svg className="w-full h-full -rotate-90" viewBox="0 0 100 100">
+                    <circle cx="50" cy="50" r="40" stroke="#F1F5F9" strokeWidth="8" fill="none" />
+                    {/* Pink arc */}
+                    <circle cx="50" cy="50" r="40" stroke="#E2619B" strokeWidth="8" strokeDasharray="180 250" strokeLinecap="round" fill="none" />
+                    {/* Purple inner arc */}
+                    <circle cx="50" cy="50" r="30" stroke="#5E81F4" strokeWidth="6" strokeDasharray="120 200" strokeLinecap="round" fill="none" />
+                  </svg>
+                  <div className="absolute text-center">
+                    <span className="text-xs font-extrabold text-slate-800 block">Elevated</span>
+                    <span className="text-[10px] text-slate-400 font-medium">185 mg/dl</span>
+                  </div>
+                </div>
+
+                <div className="ml-4 space-y-1.5 text-[11px]">
+                  <div className="text-slate-500">Yesterday status - <span className="text-rose-500 font-bold">High</span></div>
+                  <div className="text-slate-500">This week status - <span className="text-amber-500 font-bold">Elevated</span></div>
+                  <div className="text-slate-500">Last week status - <span className="text-emerald-500 font-bold">Normal</span></div>
+                </div>
+              </div>
+            </div>
+
+            {/* Today's Data Points */}
+            <div className="pt-3 border-t border-slate-100 text-[11px] space-y-1">
+              <div className="font-bold text-slate-700 flex items-center space-x-1 mb-1">
+                <Activity className="w-3.5 h-3.5 text-blue-600" />
+                <span>Today's data</span>
+              </div>
+              <div className="flex items-center space-x-2 text-slate-600">
+                <span className="w-2 h-2 rounded-full bg-[#E2619B]" />
+                <span>185 mg/dl • After meal</span>
+              </div>
+              <div className="flex items-center space-x-2 text-slate-600">
+                <span className="w-2 h-2 rounded-full bg-[#5E81F4]" />
+                <span>110 mg/dl • Before meal</span>
+              </div>
+              <div className="flex items-center space-x-2 text-emerald-600 font-semibold">
+                <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                <span>Status - In Active Management</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Card 2: Blood Pressure & Heartbeat Wave Widget (Matches reference photo) */}
+          <div className="lg:col-span-5 bg-white rounded-3xl p-6 border border-slate-200/80 shadow-sm flex flex-col justify-between">
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm font-bold text-slate-800">Blood Pressure</span>
+                <span className="flex items-center space-x-1 text-[11px] text-slate-400 border border-slate-200 px-2.5 py-1 rounded-xl">
+                  <span>Today</span>
+                  <ChevronDown className="w-3 h-3" />
+                </span>
+              </div>
+
+              {/* Orange Wave Curve Chart */}
+              <div className="h-28 w-full relative my-2">
+                <svg className="w-full h-full" viewBox="0 0 300 80" preserveAspectRatio="none">
+                  <defs>
+                    <linearGradient id="bpGrad" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#F6AD55" stopOpacity="0.4" />
+                      <stop offset="100%" stopColor="#F6AD55" stopOpacity="0.0" />
+                    </linearGradient>
+                  </defs>
+                  <path
+                    d="M 0 50 Q 50 20, 100 45 T 200 30 T 300 35 L 300 80 L 0 80 Z"
+                    fill="url(#bpGrad)"
+                  />
+                  <path
+                    d="M 0 50 Q 50 20, 100 45 T 200 30 T 300 35"
+                    fill="none"
+                    stroke="#ED8936"
+                    strokeWidth="2.5"
+                  />
+                  <circle cx="280" cy="35" r="4" fill="#ED8936" />
+                </svg>
+                {/* Timeline Axis */}
+                <div className="flex justify-between text-[10px] text-slate-400 font-mono mt-1 px-1">
+                  <span>8.00</span>
+                  <span>11.00</span>
+                  <span>14.00</span>
+                  <span>17.00</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Split Metrics: Blood Pressure & Heartbeat */}
+            <div className="grid grid-cols-2 gap-4 pt-4 border-t border-slate-100">
+              <div className="space-y-1">
+                <div className="flex items-center space-x-1.5 text-[11px] font-bold text-slate-700">
+                  <Heart className="w-3.5 h-3.5 text-rose-500 fill-rose-500" />
+                  <span>Blood Pressure</span>
+                </div>
+                <div className="text-base font-extrabold text-slate-900">120/80 mmHg</div>
+                <div className="text-[10px] text-slate-400">Highest 140/90 • Lowest 118/74</div>
+              </div>
+
+              <div className="space-y-1 pl-4 border-l border-slate-100">
+                <div className="flex items-center space-x-1.5 text-[11px] font-bold text-slate-700">
+                  <Activity className="w-3.5 h-3.5 text-emerald-500" />
+                  <span>Heartbeat</span>
+                </div>
+                <div className="text-base font-extrabold text-slate-900">88 BPM</div>
+                <div className="text-[10px] text-slate-400">Sinus Rhythm Average</div>
+              </div>
+            </div>
+          </div>
+
+          {/* Card 3: Weight Chart & Upcoming Modules Sandbox (Sprint 3 & 4 Preview) */}
+          <div className="lg:col-span-3 bg-white rounded-3xl p-6 border border-slate-200/80 shadow-sm flex flex-col justify-between space-y-4">
+            <div>
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-sm font-bold text-slate-800">Weight & Vitals</span>
+                <span className="px-2 py-0.5 rounded-md bg-purple-50 text-purple-700 text-[10px] font-bold">
+                  Sprint 3 & 4
+                </span>
+              </div>
+
+              <div className="p-3.5 rounded-2xl bg-slate-900 text-white flex items-center justify-between mb-3 shadow-sm">
+                <div>
+                  <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Baseline Weight</span>
+                  <div className="text-lg font-bold">180.0 lb</div>
+                </div>
+                <div className="w-8 h-8 rounded-xl bg-white/10 flex items-center justify-center font-bold text-emerald-400 text-xs">
+                  -2.4
+                </div>
+              </div>
+
+              {/* Upcoming Feature Badges */}
+              <div className="space-y-2 text-xs">
+                <div className="p-2.5 rounded-xl bg-purple-50 border border-purple-200/60 flex items-center justify-between">
+                  <div className="flex items-center space-x-2">
+                    <Camera className="w-4 h-4 text-purple-600" />
+                    <div>
+                      <div className="font-bold text-[11px] text-purple-900 leading-tight">AI Prescription OCR</div>
+                      <div className="text-[9px] text-purple-600">Camera recognition in Sprint 3</div>
                     </div>
+                  </div>
+                  <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-purple-200 text-purple-800">Soon</span>
+                </div>
 
-                    <div className="mb-3">
-                      <h3 className="text-base font-bold text-slate-800">{item.medicine_name}</h3>
-                      <div className="flex items-center space-x-2 mt-0.5">
-                        <span className="text-xs font-semibold text-blue-600">{item.dosage}</span>
-                        <span className="text-slate-300">•</span>
-                        <span className="text-xs text-slate-500">{item.form}</span>
-                        <span className="text-slate-300">•</span>
-                        <span className="text-[11px] font-medium text-slate-500">{item.meal_relation}</span>
-                      </div>
-                      {item.instructions && (
-                        <p className="text-[11px] text-slate-400 mt-2 bg-slate-50 p-2 rounded-lg italic">
-                          "{item.instructions}"
-                        </p>
-                      )}
+                <div className="p-2.5 rounded-xl bg-amber-50 border border-amber-200/60 flex items-center justify-between">
+                  <div className="flex items-center space-x-2">
+                    <TrendingUp className="w-4 h-4 text-amber-600" />
+                    <div>
+                      <div className="font-bold text-[11px] text-amber-900 leading-tight">Smart Refill Forecast</div>
+                      <div className="text-[9px] text-amber-600">Burn-rate math in Sprint 4</div>
                     </div>
+                  </div>
+                  <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-amber-200 text-amber-800">Soon</span>
+                </div>
+              </div>
+            </div>
 
-                    {/* Stock level info */}
-                    <div className="flex items-center justify-between text-[11px] pt-3 border-t border-slate-100 mb-4">
-                      <span className="text-slate-400">Stock available:</span>
-                      <span className={`font-semibold ${item.is_low_stock ? 'text-rose-600 font-bold' : 'text-slate-700'}`}>
-                        {item.current_stock} pills left {item.is_low_stock && '⚠️ Low'}
-                      </span>
-                    </div>
+            <button
+              onClick={() => setActiveSection('roadmap')}
+              className="w-full py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-colors flex items-center justify-center space-x-1.5"
+            >
+              <Sparkles className="w-3.5 h-3.5 text-blue-600" />
+              <span>Explore All Upcoming Modules</span>
+            </button>
+          </div>
+        </div>
+      </div>
 
-                    {/* Action Buttons */}
-                    <div className="flex items-center space-x-2">
-                      {isTaken ? (
-                        <button
-                          onClick={() => handleDoseAction(item, 'SNOOZED')}
-                          className="flex-1 py-2 px-3 rounded-xl border border-slate-200 text-slate-500 hover:bg-white text-xs font-medium transition-colors"
-                        >
-                          Undo / Change
-                        </button>
-                      ) : (
-                        <>
+      {/* BOTTOM SECTION: "Medication Tracker" Table (Exact Reference Match) */}
+      <div className="bg-white rounded-3xl p-6 border border-slate-200/80 shadow-sm space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div>
+            <h2 className="text-base font-extrabold text-slate-900 tracking-tight">Medication Tracker</h2>
+            <p className="text-xs text-slate-400">Real-time daily schedule, dose intake logger, and prescription cabinet.</p>
+          </div>
+
+          <div className="flex items-center space-x-2">
+            <button
+              onClick={() => setIsAddModalOpen(true)}
+              className="inline-flex items-center space-x-1.5 px-4 py-2 rounded-2xl bg-[#5E81F4] hover:bg-blue-600 text-white text-xs font-bold shadow-md shadow-blue-500/20 transition-all"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Add Medication</span>
+            </button>
+          </div>
+        </div>
+
+        {/* The Exact Clean Table matching the photo */}
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-xs">
+            <thead>
+              <tr className="border-b border-slate-100 text-slate-400 font-semibold text-[11px]">
+                <th className="pb-3 font-semibold">Name</th>
+                <th className="pb-3 font-semibold">Frequency</th>
+                <th className="pb-3 font-semibold">Dosage</th>
+                <th className="pb-3 font-semibold">Taken</th>
+                <th className="pb-3 font-semibold">Meal Timing</th>
+                <th className="pb-3 font-semibold">Next Dose</th>
+                <th className="pb-3 font-semibold text-right">Live Action</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100 text-slate-700">
+              {medicines.length === 0 ? (
+                <tr>
+                  <td colSpan="7" className="py-8 text-center text-slate-400">
+                    No medications in tracker yet. Click "+ Add Medication" above.
+                  </td>
+                </tr>
+              ) : (
+                medicines.map((med, index) => {
+                  const scheduleTime = med.schedules?.[0]?.time_str || '08:00'
+                  const isLow = med.current_stock <= med.low_stock_threshold
+                  const formattedNum = String(index + 1).padStart(2, '0')
+
+                  // Find today's timeline item for live status
+                  const timelineItem = summary?.timeline?.find((t) => t.medicine_id === med.id)
+                  const isTaken = timelineItem?.status === 'TAKEN'
+
+                  return (
+                    <tr key={med.id} className="hover:bg-slate-50/70 transition-colors">
+                      {/* Name */}
+                      <td className="py-4 font-bold text-slate-900 whitespace-nowrap">
+                        <span className="text-slate-400 font-normal mr-2">{formattedNum}.</span>
+                        <span>{med.name} {med.dosage}</span>
+                        {isLow && (
+                          <span className="ml-2 px-2 py-0.5 rounded-full bg-rose-50 text-rose-600 text-[10px] font-bold">
+                            ⚠️ Low Stock ({med.current_stock} left)
+                          </span>
+                        )}
+                      </td>
+
+                      {/* Frequency */}
+                      <td className="py-4 font-medium text-slate-500 whitespace-nowrap">
+                        {med.frequency || '8hour'}
+                      </td>
+
+                      {/* Dosage */}
+                      <td className="py-4 font-semibold text-slate-800 whitespace-nowrap">
+                        1 {med.form || 'Tablet'}
+                      </td>
+
+                      {/* Taken */}
+                      <td className="py-4 whitespace-nowrap">
+                        {isTaken ? (
+                          <span className="inline-flex items-center space-x-1 px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-bold text-[10px]">
+                            <Check className="w-3 h-3" />
+                            <span>1</span>
+                          </span>
+                        ) : (
+                          <span className="text-slate-400 font-bold text-xs">0</span>
+                        )}
+                      </td>
+
+                      {/* Meal Timing */}
+                      <td className="py-4 font-medium text-slate-600 whitespace-nowrap">
+                        {med.meal_relation || 'After'}
+                      </td>
+
+                      {/* Next Dose */}
+                      <td className="py-4 font-mono font-bold text-slate-800 whitespace-nowrap">
+                        {scheduleTime}
+                      </td>
+
+                      {/* Live Action */}
+                      <td className="py-4 text-right whitespace-nowrap">
+                        {isTaken ? (
+                          <span className="inline-flex items-center space-x-1 text-emerald-600 font-bold text-xs">
+                            <CheckCircle2 className="w-4 h-4" />
+                            <span>Taken</span>
+                          </span>
+                        ) : (
                           <button
-                            onClick={() => handleDoseAction(item, 'TAKEN')}
-                            className="flex-1 py-2.5 px-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs shadow-sm transition-all flex items-center justify-center space-x-1.5"
+                            onClick={() => handleDoseAction({ medicine_id: med.id, schedule_id: med.schedules?.[0]?.id, scheduled_time: scheduleTime, medicine_name: med.name, dosage: med.dosage }, 'TAKEN')}
+                            className="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-xs transition-all"
                           >
                             <Check className="w-3.5 h-3.5" />
                             <span>Take Dose</span>
                           </button>
-                          <button
-                            onClick={() => handleDoseAction(item, 'SNOOZED')}
-                            className="px-3 py-2.5 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 text-xs font-medium transition-colors"
-                            title="Snooze 15 minutes"
-                          >
-                            Snooze
-                          </button>
-                        </>
-                      )}
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
-          )}
+                        )}
+
+                        <button
+                          onClick={() => {
+                            setSelectedMedForRefill(med)
+                            setIsRefillModalOpen(true)
+                          }}
+                          className="ml-2 p-1.5 rounded-lg text-slate-400 hover:text-blue-600 transition-colors"
+                          title="Refill stock"
+                        >
+                          <RefreshCw className="w-3.5 h-3.5" />
+                        </button>
+
+                        <button
+                          onClick={() => handleDeleteMedicine(med.id, med.name)}
+                          className="ml-1 p-1.5 rounded-lg text-slate-400 hover:text-rose-600 transition-colors"
+                          title="Delete"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </td>
+                    </tr>
+                  )
+                })
+              )}
+            </tbody>
+          </table>
         </div>
-      )}
-
-      {/* TAB 2: MEDICATION CABINET */}
-      {activeTab === 'cabinet' && (
-        <div className="space-y-4">
-          {/* Search & Filter Bar */}
-          <div className="bg-white rounded-2xl p-4 border border-slate-200/80 shadow-sm flex flex-col md:flex-row items-center justify-between gap-3">
-            <div className="relative w-full md:w-80">
-              <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
-              <input
-                type="text"
-                placeholder="Search medication, dosage, disease..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 rounded-xl border border-slate-200 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
-              />
-            </div>
-
-            {/* Disease Filter Pills */}
-            <div className="flex items-center space-x-1.5 overflow-x-auto w-full md:w-auto pb-1 md:pb-0">
-              {diseaseCategories.map((cat) => (
-                <button
-                  key={cat}
-                  onClick={() => setSelectedDisease(cat)}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-medium whitespace-nowrap transition-all ${
-                    selectedDisease === cat
-                      ? 'bg-slate-900 text-white shadow-sm'
-                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                  }`}
-                >
-                  {cat}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Medicine Cards Grid */}
-          {filteredMeds.length === 0 ? (
-            <div className="bg-white rounded-2xl border border-slate-200 p-12 text-center space-y-3">
-              <Pill className="w-10 h-10 text-slate-300 mx-auto" />
-              <p className="text-sm font-semibold text-slate-700">No medications found</p>
-              <p className="text-xs text-slate-400">Try adjusting your search criteria or add a new medication.</p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {filteredMeds.map((med) => (
-                <div
-                  key={med.id}
-                  className="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-sm hover:shadow-md transition-all flex flex-col justify-between"
-                >
-                  <div>
-                    <div className="flex items-center justify-between mb-2.5">
-                      <span className="px-2.5 py-0.5 rounded-md bg-blue-50 text-blue-700 font-semibold text-[11px]">
-                        {med.disease_category}
-                      </span>
-                      {med.is_low_stock && (
-                        <span className="px-2.5 py-0.5 rounded-md bg-rose-50 text-rose-700 font-bold text-[11px] animate-pulse">
-                          ⚠️ Low Stock
-                        </span>
-                      )}
-                    </div>
-
-                    <h3 className="text-base font-bold text-slate-900">{med.name}</h3>
-                    <div className="text-xs font-semibold text-slate-500 mb-3">
-                      {med.dosage} • {med.form} • {med.frequency}
-                    </div>
-
-                    {med.instructions && (
-                      <p className="text-xs text-slate-600 bg-slate-50 p-2.5 rounded-xl mb-3">
-                        {med.instructions}
-                      </p>
-                    )}
-
-                    {/* Scheduled Times */}
-                    <div className="space-y-1 mb-4">
-                      <div className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Scheduled Times</div>
-                      <div className="flex flex-wrap gap-1.5">
-                        {med.schedules.map((s) => (
-                          <span
-                            key={s.id}
-                            className="px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 text-xs font-mono font-medium"
-                          >
-                            {s.time_str}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Stock & Quick Actions */}
-                  <div className="pt-3 border-t border-slate-100 space-y-3">
-                    <div className="flex items-center justify-between text-xs">
-                      <span className="text-slate-400">Remaining pills:</span>
-                      <span className={`font-bold ${med.is_low_stock ? 'text-rose-600' : 'text-slate-800'}`}>
-                        {med.current_stock} pills
-                      </span>
-                    </div>
-
-                    {/* Stock Progress Meter */}
-                    <div className="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
-                      <div
-                        className={`h-full rounded-full transition-all ${
-                          med.is_low_stock ? 'bg-rose-500' : 'bg-emerald-500'
-                        }`}
-                        style={{ width: `${Math.min(100, (med.current_stock / 30) * 100)}%` }}
-                      />
-                    </div>
-
-                    <div className="flex items-center space-x-2 pt-1">
-                      <button
-                        onClick={() => {
-                          setSelectedMedForRefill(med)
-                          setIsRefillModalOpen(true)
-                        }}
-                        className="flex-1 py-1.5 px-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs transition-colors flex items-center justify-center space-x-1"
-                      >
-                        <RefreshCw className="w-3 h-3 text-blue-600" />
-                        <span>Refill (+30)</span>
-                      </button>
-
-                      <button
-                        onClick={() => handleDeleteMedicine(med.id, med.name)}
-                        className="p-2 rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors"
-                        title="Delete medicine"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* TAB 3: HEALTH PROFILE & CONDITIONS */}
-      {activeTab === 'profile' && (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Patient Details Card */}
-          <div className="lg:col-span-1 bg-white rounded-2xl p-6 border border-slate-200/80 shadow-sm space-y-4">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-              <h3 className="text-sm font-bold text-slate-800">Personal Information</h3>
-              <button
-                onClick={() => setIsEditingProfile(!isEditingProfile)}
-                className="text-xs font-semibold text-blue-600 hover:text-blue-700 flex items-center space-x-1"
-              >
-                <Edit3 className="w-3.5 h-3.5" />
-                <span>{isEditingProfile ? 'Cancel' : 'Edit'}</span>
-              </button>
-            </div>
-
-            {isEditingProfile ? (
-              <form onSubmit={handleUpdateProfile} className="space-y-3">
-                <div>
-                  <label className="block text-[11px] font-semibold text-slate-600 mb-1">Full Name</label>
-                  <input
-                    type="text"
-                    required
-                    value={profileForm.full_name}
-                    onChange={(e) => setProfileForm({ ...profileForm, full_name: e.target.value })}
-                    className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs"
-                  />
-                </div>
-                <div>
-                  <label className="block text-[11px] font-semibold text-slate-600 mb-1">Contact Phone</label>
-                  <input
-                    type="text"
-                    value={profileForm.contact_number}
-                    onChange={(e) => setProfileForm({ ...profileForm, contact_number: e.target.value })}
-                    className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs"
-                  />
-                </div>
-                <div>
-                  <label className="block text-[11px] font-semibold text-slate-600 mb-1">Emergency Contact</label>
-                  <input
-                    type="text"
-                    value={profileForm.emergency_contact}
-                    onChange={(e) => setProfileForm({ ...profileForm, emergency_contact: e.target.value })}
-                    className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs"
-                  />
-                </div>
-                <div>
-                  <label className="block text-[11px] font-semibold text-slate-600 mb-1">Blood Group</label>
-                  <input
-                    type="text"
-                    placeholder="e.g. O+, A+, B+"
-                    value={profileForm.blood_group}
-                    onChange={(e) => setProfileForm({ ...profileForm, blood_group: e.target.value })}
-                    className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs"
-                  />
-                </div>
-                <button
-                  type="submit"
-                  className="w-full py-2 rounded-xl bg-blue-600 text-white font-semibold text-xs mt-2"
-                >
-                  Save Profile
-                </button>
-              </form>
-            ) : (
-              <div className="space-y-3 text-xs">
-                <div>
-                  <span className="text-slate-400 block text-[11px]">Full Name</span>
-                  <span className="font-semibold text-slate-800">{profile?.full_name || 'Not set'}</span>
-                </div>
-                <div>
-                  <span className="text-slate-400 block text-[11px]">Registered Email</span>
-                  <span className="font-semibold text-slate-800">{user?.email}</span>
-                </div>
-                <div>
-                  <span className="text-slate-400 block text-[11px]">Contact Phone</span>
-                  <span className="font-semibold text-slate-800">{profile?.contact_number || 'Not provided'}</span>
-                </div>
-                <div>
-                  <span className="text-slate-400 block text-[11px]">Emergency Contact</span>
-                  <span className="font-semibold text-rose-600 font-bold">{profile?.emergency_contact || 'None registered'}</span>
-                </div>
-                <div>
-                  <span className="text-slate-400 block text-[11px]">Blood Group</span>
-                  <span className="font-semibold text-slate-800">{profile?.blood_group || 'Not specified'}</span>
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Chronic Health Conditions */}
-          <div className="lg:col-span-2 bg-white rounded-2xl p-6 border border-slate-200/80 shadow-sm space-y-4">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-              <div>
-                <h3 className="text-sm font-bold text-slate-800">Chronic Health Conditions</h3>
-                <p className="text-xs text-slate-400">Recorded medical history linked to your medication reminders.</p>
-              </div>
-              <button
-                onClick={() => setIsAddingCondition(!isAddingCondition)}
-                className="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-blue-50 text-blue-700 text-xs font-semibold hover:bg-blue-100 transition-colors"
-              >
-                <Plus className="w-3.5 h-3.5" />
-                <span>Add Condition</span>
-              </button>
-            </div>
-
-            {/* Add Condition Inline Form */}
-            {isAddingCondition && (
-              <form onSubmit={handleAddCondition} className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-3">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-[11px] font-semibold text-slate-700 mb-1">Condition Name</label>
-                    <input
-                      type="text"
-                      required
-                      placeholder="e.g. Type 2 Diabetes, Hypertension"
-                      value={conditionForm.condition_name}
-                      onChange={(e) => setConditionForm({ ...conditionForm, condition_name: e.target.value })}
-                      className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs bg-white"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[11px] font-semibold text-slate-700 mb-1">Severity</label>
-                    <select
-                      value={conditionForm.severity}
-                      onChange={(e) => setConditionForm({ ...conditionForm, severity: e.target.value })}
-                      className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs bg-white"
-                    >
-                      <option value="Mild">Mild</option>
-                      <option value="Moderate">Moderate</option>
-                      <option value="Severe">Severe</option>
-                    </select>
-                  </div>
-                </div>
-                <div className="flex justify-end space-x-2">
-                  <button
-                    type="button"
-                    onClick={() => setIsAddingCondition(false)}
-                    className="px-3 py-1.5 rounded-xl border border-slate-200 text-xs font-medium"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    className="px-4 py-1.5 rounded-xl bg-blue-600 text-white text-xs font-semibold"
-                  >
-                    Save Condition
-                  </button>
-                </div>
-              </form>
-            )}
-
-            {/* Conditions List */}
-            {profile?.health_conditions?.length === 0 ? (
-              <p className="text-xs text-slate-400 py-6 text-center">No chronic conditions recorded yet.</p>
-            ) : (
-              <div className="space-y-2.5">
-                {profile?.health_conditions?.map((c) => (
-                  <div
-                    key={c.id}
-                    className="flex items-center justify-between p-3.5 rounded-xl bg-slate-50 border border-slate-100"
-                  >
-                    <div className="space-y-0.5">
-                      <div className="flex items-center space-x-2">
-                        <span className="font-bold text-slate-800 text-xs">{c.condition_name}</span>
-                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${
-                          c.severity === 'Severe'
-                            ? 'bg-rose-100 text-rose-700'
-                            : c.severity === 'Moderate'
-                            ? 'bg-amber-100 text-amber-700'
-                            : 'bg-emerald-100 text-emerald-700'
-                        }`}>
-                          {c.severity}
-                        </span>
-                      </div>
-                      {c.notes && <p className="text-[11px] text-slate-500">{c.notes}</p>}
-                    </div>
-
-                    <button
-                      onClick={() => handleDeleteCondition(c.id)}
-                      className="text-slate-400 hover:text-rose-600 p-1.5"
-                      title="Remove condition"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* TAB 4: UPCOMING FEATURES & PROJECT ROADMAP */}
-      {activeTab === 'roadmap' && (
-        <div className="space-y-6">
-          {/* Roadmap Intro Banner */}
-          <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 rounded-3xl p-6 sm:p-8 text-white shadow-xl relative overflow-hidden">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-              <div className="space-y-2">
-                <div className="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-300 text-xs font-semibold border border-emerald-500/30">
-                  <CheckCircle2 className="w-3.5 h-3.5" />
-                  <span>Milestone 1 Achieved & Verified</span>
-                </div>
-                <h2 className="text-xl sm:text-2xl font-extrabold tracking-tight">
-                  PillSync Comprehensive Product Vision & Feature Directory
-                </h2>
-                <p className="text-xs text-slate-300 max-w-2xl leading-relaxed">
-                  Milestone 1 is fully delivered with secure authentication, database schemas, and role management.
-                  Below is the planned architecture and exact names of advanced modules scheduled for implementation in upcoming sprints.
-                </p>
-              </div>
-
-              <div className="bg-white/10 backdrop-blur-md rounded-2xl p-4 border border-white/10 text-center shrink-0">
-                <div className="text-2xl font-bold text-emerald-400">100%</div>
-                <div className="text-[11px] font-semibold text-slate-300 uppercase tracking-wider">Milestone 1 Status</div>
-              </div>
-            </div>
-          </div>
-
-          {/* Planned Modules Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-            {/* Module 1: AI Prescription OCR (Sprint 3) */}
-            <div className="bg-white rounded-3xl p-6 border border-purple-200/80 shadow-sm space-y-4 hover:shadow-md transition-all">
-              <div className="flex items-center justify-between">
-                <div className="w-10 h-10 rounded-2xl bg-purple-50 text-purple-600 flex items-center justify-center font-bold">
-                  <Camera className="w-5 h-5" />
-                </div>
-                <span className="text-[10px] uppercase font-bold tracking-wider px-2.5 py-1 rounded-full bg-purple-100 text-purple-800 border border-purple-200">
-                  Upcoming: Sprint 3 (Weeks 5 & 6)
-                </span>
-              </div>
-
-              <div>
-                <h3 className="text-base font-bold text-slate-900">
-                  AI Prescription Scanner & Medication Recognition (OCR)
-                </h3>
-                <p className="text-xs text-slate-500 mt-1">
-                  Computer vision pipeline enabling patients to capture handwritten or printed prescriptions and auto-extract drug data.
-                </p>
-              </div>
-
-              <div className="space-y-2 pt-2 border-t border-slate-100 text-xs">
-                <div className="font-semibold text-slate-700 text-[11px] uppercase tracking-wider">Features Being Introduced:</div>
-                <ul className="space-y-1.5 text-slate-600">
-                  <li className="flex items-center space-x-2">
-                    <span className="w-1.5 h-1.5 rounded-full bg-purple-600" />
-                    <span><strong>Prescription Image Upload & Live Camera Capture</strong></span>
-                  </li>
-                  <li className="flex items-center space-x-2">
-                    <span className="w-1.5 h-1.5 rounded-full bg-purple-600" />
-                    <span><strong>Tesseract OCR & Adaptive Image Filtering</strong></span>
-                  </li>
-                  <li className="flex items-center space-x-2">
-                    <span className="w-1.5 h-1.5 rounded-full bg-purple-600" />
-                    <span><strong>NLP Entity Extraction (Drug Name, Strength, Frequency)</strong></span>
-                  </li>
-                  <li className="flex items-center space-x-2">
-                    <span className="w-1.5 h-1.5 rounded-full bg-purple-600" />
-                    <span><strong>Interactive Doctor Slip Verification Drawer</strong></span>
-                  </li>
-                  <li className="flex items-center space-x-2">
-                    <span className="w-1.5 h-1.5 rounded-full bg-purple-600" />
-                    <span><strong>Pill Bottle Label Barcode Scanner</strong></span>
-                  </li>
-                </ul>
-              </div>
-
-              {/* Mock Preview Visual */}
-              <div className="p-3.5 rounded-2xl bg-purple-50/50 border border-dashed border-purple-300 text-center">
-                <div className="text-[11px] font-semibold text-purple-700">📸 Sprint 3 Preview Zone: Image Recognition Sandbox</div>
-                <div className="text-[10px] text-purple-500 mt-0.5">Drag & drop prescription slip to test recognition pipeline</div>
-              </div>
-            </div>
-
-            {/* Module 2: Refill Forecast & Stock Intelligence (Sprint 4) */}
-            <div className="bg-white rounded-3xl p-6 border border-amber-200/80 shadow-sm space-y-4 hover:shadow-md transition-all">
-              <div className="flex items-center justify-between">
-                <div className="w-10 h-10 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center font-bold">
-                  <TrendingUp className="w-5 h-5" />
-                </div>
-                <span className="text-[10px] uppercase font-bold tracking-wider px-2.5 py-1 rounded-full bg-amber-100 text-amber-800 border border-amber-200">
-                  Upcoming: Sprint 4 (Weeks 6 & 7)
-                </span>
-              </div>
-
-              <div>
-                <h3 className="text-base font-bold text-slate-900">
-                  Smart Refill Prediction & Inventory Burn-Rate Engine
-                </h3>
-                <p className="text-xs text-slate-500 mt-1">
-                  Predictive mathematical forecasting that tracks pill depletion velocity and alerts pharmacies/caregivers before stock runs out.
-                </p>
-              </div>
-
-              <div className="space-y-2 pt-2 border-t border-slate-100 text-xs">
-                <div className="font-semibold text-slate-700 text-[11px] uppercase tracking-wider">Features Being Introduced:</div>
-                <ul className="space-y-1.5 text-slate-600">
-                  <li className="flex items-center space-x-2">
-                    <span className="w-1.5 h-1.5 rounded-full bg-amber-600" />
-                    <span><strong>Mathematical Daily Burn Rate Algorithm</strong></span>
-                  </li>
-                  <li className="flex items-center space-x-2">
-                    <span className="w-1.5 h-1.5 rounded-full bg-amber-600" />
-                    <span><strong>Predictive Calendar Stock Depletion Forecasting</strong></span>
-                  </li>
-                  <li className="flex items-center space-x-2">
-                    <span className="w-1.5 h-1.5 rounded-full bg-amber-600" />
-                    <span><strong>Automated 5-Day Low-Stock Refill Alert Triggers</strong></span>
-                  </li>
-                  <li className="flex items-center space-x-2">
-                    <span className="w-1.5 h-1.5 rounded-full bg-amber-600" />
-                    <span><strong>One-Click Pharmacy Refill Order Request</strong></span>
-                  </li>
-                </ul>
-              </div>
-
-              {/* Mathematical Formula Preview */}
-              <div className="p-3.5 rounded-2xl bg-amber-50/60 border border-amber-200 text-xs font-mono text-amber-900">
-                <div className="text-[10px] uppercase font-bold tracking-wider text-amber-700 mb-1">Consumption Formula:</div>
-                <div>Days Remaining = Current Stock / (Doses per Day × Pills per Dose)</div>
-              </div>
-            </div>
-
-            {/* Module 3: Drug-Drug Interaction Safety (Innovation Backlog) */}
-            <div className="bg-white rounded-3xl p-6 border border-rose-200/80 shadow-sm space-y-4 hover:shadow-md transition-all">
-              <div className="flex items-center justify-between">
-                <div className="w-10 h-10 rounded-2xl bg-rose-50 text-rose-600 flex items-center justify-center font-bold">
-                  <ShieldAlert className="w-5 h-5" />
-                </div>
-                <span className="text-[10px] uppercase font-bold tracking-wider px-2.5 py-1 rounded-full bg-rose-100 text-rose-800 border border-rose-200">
-                  Upcoming: Clinical Safety (Week 8)
-                </span>
-              </div>
-
-              <div>
-                <h3 className="text-base font-bold text-slate-900">
-                  Drug-Drug & Food-Drug Interaction Safety Engine
-                </h3>
-                <p className="text-xs text-slate-500 mt-1">
-                  Guarding patients against severe polypharmacy adverse events by checking contraindicated medications against FDA/RxNorm databases.
-                </p>
-              </div>
-
-              <div className="space-y-2 pt-2 border-t border-slate-100 text-xs">
-                <div className="font-semibold text-slate-700 text-[11px] uppercase tracking-wider">Features Being Introduced:</div>
-                <ul className="space-y-1.5 text-slate-600">
-                  <li className="flex items-center space-x-2">
-                    <span className="w-1.5 h-1.5 rounded-full bg-rose-600" />
-                    <span><strong>Polypharmacy Cross-Check via RxNorm / OpenFDA API</strong></span>
-                  </li>
-                  <li className="flex items-center space-x-2">
-                    <span className="w-1.5 h-1.5 rounded-full bg-rose-600" />
-                    <span><strong>Severity Alert Badges (Mild, Moderate, Severe Contraindication)</strong></span>
-                  </li>
-                  <li className="flex items-center space-x-2">
-                    <span className="w-1.5 h-1.5 rounded-full bg-rose-600" />
-                    <span><strong>Dietary & Food Contraindication Warnings (e.g. Grapefruit, Dairy)</strong></span>
-                  </li>
-                </ul>
-              </div>
-
-              <div className="p-3.5 rounded-2xl bg-rose-50/60 border border-rose-200 text-xs text-rose-900 flex items-center space-x-2">
-                <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0" />
-                <span>Automated safety check runs whenever a new medication is added.</span>
-              </div>
-            </div>
-
-            {/* Module 4: Adherence Analytics & Clinical Reports (Sprint 4) */}
-            <div className="bg-white rounded-3xl p-6 border border-blue-200/80 shadow-sm space-y-4 hover:shadow-md transition-all">
-              <div className="flex items-center justify-between">
-                <div className="w-10 h-10 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center font-bold">
-                  <FileText className="w-5 h-5" />
-                </div>
-                <span className="text-[10px] uppercase font-bold tracking-wider px-2.5 py-1 rounded-full bg-blue-100 text-blue-800 border border-blue-200">
-                  Upcoming: Analytics (Weeks 7 & 8)
-                </span>
-              </div>
-
-              <div>
-                <h3 className="text-base font-bold text-slate-900">
-                  Adherence Analytics & Doctor Consultation Reports
-                </h3>
-                <p className="text-xs text-slate-500 mt-1">
-                  Visual compliance trends, missed-dose escalation alerts, and one-click PDF health report generation for physician visits.
-                </p>
-              </div>
-
-              <div className="space-y-2 pt-2 border-t border-slate-100 text-xs">
-                <div className="font-semibold text-slate-700 text-[11px] uppercase tracking-wider">Features Being Introduced:</div>
-                <ul className="space-y-1.5 text-slate-600">
-                  <li className="flex items-center space-x-2">
-                    <span className="w-1.5 h-1.5 rounded-full bg-blue-600" />
-                    <span><strong>7-Day & 30-Day Medication Adherence Line/Bar Charts</strong></span>
-                  </li>
-                  <li className="flex items-center space-x-2">
-                    <span className="w-1.5 h-1.5 rounded-full bg-blue-600" />
-                    <span><strong>Caregiver Emergency Escalation via SMS / Push Notification</strong></span>
-                  </li>
-                  <li className="flex items-center space-x-2">
-                    <span className="w-1.5 h-1.5 rounded-full bg-blue-600" />
-                    <span><strong>One-Click PDF Clinical Intake Report Generator</strong></span>
-                  </li>
-                  <li className="flex items-center space-x-2">
-                    <span className="w-1.5 h-1.5 rounded-full bg-blue-600" />
-                    <span><strong>Caregiver Multi-Patient Remote Adherence Dashboard</strong></span>
-                  </li>
-                </ul>
-              </div>
-
-              <div className="p-3.5 rounded-2xl bg-blue-50/60 border border-blue-200 text-xs text-blue-900 flex items-center space-x-2">
-                <CheckCircle2 className="w-4 h-4 text-blue-600 shrink-0" />
-                <span>Generates exportable clinical logs formatted for doctors & clinics.</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      </div>
 
       {/* MODAL: ADD NEW MEDICATION */}
       {isAddModalOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl max-w-xl w-full p-6 sm:p-8 shadow-2xl border border-slate-100 space-y-5 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100">
               <div>
@@ -1304,7 +778,7 @@ export default function PatientDashboard() {
                   <input
                     type="text"
                     required
-                    placeholder="e.g. Metformin"
+                    placeholder="e.g. Kefuclav"
                     value={medForm.name}
                     onChange={(e) => setMedForm({ ...medForm, name: e.target.value })}
                     className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs"
@@ -1335,30 +809,28 @@ export default function PatientDashboard() {
                     <option value="Capsule">Capsule</option>
                     <option value="Syrup">Syrup</option>
                     <option value="Injection">Injection</option>
-                    <option value="Drops">Drops</option>
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Disease / Category</label>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">Frequency</label>
                   <input
                     type="text"
-                    placeholder="e.g. Diabetes, BP"
-                    value={medForm.disease_category}
-                    onChange={(e) => setMedForm({ ...medForm, disease_category: e.target.value })}
+                    placeholder="e.g. 8hour, Once daily"
+                    value={medForm.frequency}
+                    onChange={(e) => setMedForm({ ...medForm, frequency: e.target.value })}
                     className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Meal Relation</label>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">Meal Timing</label>
                   <select
                     value={medForm.meal_relation}
                     onChange={(e) => setMedForm({ ...medForm, meal_relation: e.target.value })}
                     className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs"
                   >
-                    <option value="After Meal">After Meal</option>
-                    <option value="Before Meal">Before Meal</option>
+                    <option value="After">After</option>
+                    <option value="Before">Before</option>
                     <option value="With Food">With Food</option>
-                    <option value="Empty Stomach">Empty Stomach</option>
                   </select>
                 </div>
               </div>
@@ -1366,11 +838,11 @@ export default function PatientDashboard() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 mb-1">
-                    Scheduled Reminder Times (comma-separated, 24h format)
+                    Scheduled Times (comma-separated, 24h format)
                   </label>
                   <input
                     type="text"
-                    placeholder="e.g. 08:00, 20:00"
+                    placeholder="e.g. 08:00, 16:00, 23:00"
                     value={medForm.schedule_times.join(', ')}
                     onChange={(e) =>
                       setMedForm({
@@ -1391,17 +863,6 @@ export default function PatientDashboard() {
                     className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs"
                   />
                 </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">Clinical Instructions / Notes</label>
-                <textarea
-                  rows="2"
-                  placeholder="e.g. Take with a warm glass of water after breakfast."
-                  value={medForm.instructions}
-                  onChange={(e) => setMedForm({ ...medForm, instructions: e.target.value })}
-                  className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs"
-                />
               </div>
 
               <div className="flex justify-end space-x-2 pt-3 border-t border-slate-100">
@@ -1426,7 +887,7 @@ export default function PatientDashboard() {
 
       {/* MODAL: QUICK REFILL */}
       {isRefillModalOpen && selectedMedForRefill && (
-        <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl max-w-sm w-full p-6 shadow-2xl border border-slate-100 space-y-4">
             <div className="flex items-center justify-between pb-2 border-b border-slate-100">
               <h3 className="text-base font-bold text-slate-900">Refill Stock</h3>
@@ -1436,7 +897,7 @@ export default function PatientDashboard() {
             </div>
 
             <div className="space-y-1">
-              <p className="text-xs text-slate-500">Add pills to replenish inventory for:</p>
+              <p className="text-xs text-slate-500">Replenish pills for:</p>
               <div className="text-sm font-bold text-slate-800">{selectedMedForRefill.name} ({selectedMedForRefill.dosage})</div>
               <div className="text-xs text-slate-400">Current stock: {selectedMedForRefill.current_stock} pills</div>
             </div>
@@ -1489,6 +950,6 @@ export default function PatientDashboard() {
           </div>
         </div>
       )}
-    </div>
+    </SidebarLayout>
   )
 }

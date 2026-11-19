@@ -1,8 +1,7 @@
 import React from 'react'
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import { AuthProvider, useAuth } from './context/AuthContext'
 import Navbar from './components/Navbar'
-import HealthStatus from './components/HealthStatus'
 import ProtectedRoute from './components/ProtectedRoute'
 
 import Login from './pages/Login'
@@ -23,35 +22,47 @@ function DashboardRedirect() {
 }
 
 function AppRoutes() {
+  const location = useLocation()
+  const isDashboard = ['/patient', '/caregiver', '/admin'].some((path) =>
+    location.pathname.startsWith(path)
+  )
+
+  // Full-screen sidebar layout for authenticated dashboards (matching Dribbble reference)
+  if (isDashboard) {
+    return (
+      <Routes>
+        {/* Protected Patient Routes */}
+        <Route element={<ProtectedRoute allowedRoles={['PATIENT']} />}>
+          <Route path="/patient" element={<PatientDashboard />} />
+        </Route>
+
+        {/* Protected Caregiver Routes */}
+        <Route element={<ProtectedRoute allowedRoles={['CAREGIVER']} />}>
+          <Route path="/caregiver" element={<CaregiverDashboard />} />
+        </Route>
+
+        {/* Protected Admin Routes */}
+        <Route element={<ProtectedRoute allowedRoles={['ADMIN']} />}>
+          <Route path="/admin" element={<AdminDashboard />} />
+        </Route>
+
+        {/* Fallback */}
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    )
+  }
+
+  // Public Layout for Login & Register
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col">
+    <div className="min-h-screen bg-[#F4F7FE] flex flex-col">
       <Navbar />
 
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
-        {/* Application Navigation Routes */}
+      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
         <Routes>
-          {/* Public Routes */}
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
           <Route path="/dashboard" element={<DashboardRedirect />} />
           <Route path="/" element={<DashboardRedirect />} />
-
-          {/* Protected Patient Routes */}
-          <Route element={<ProtectedRoute allowedRoles={['PATIENT']} />}>
-            <Route path="/patient" element={<PatientDashboard />} />
-          </Route>
-
-          {/* Protected Caregiver Routes */}
-          <Route element={<ProtectedRoute allowedRoles={['CAREGIVER']} />}>
-            <Route path="/caregiver" element={<CaregiverDashboard />} />
-          </Route>
-
-          {/* Protected Admin Routes */}
-          <Route element={<ProtectedRoute allowedRoles={['ADMIN']} />}>
-            <Route path="/admin" element={<AdminDashboard />} />
-          </Route>
-
-          {/* Catch-all redirect */}
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </main>
