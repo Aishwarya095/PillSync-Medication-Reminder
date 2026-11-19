@@ -6,24 +6,30 @@ import {
   Pill, LayoutDashboard, FileText, History, TrendingUp, ShieldAlert, 
   Settings, LogOut, Search, Bell, Menu, X, CheckCircle2, Sparkles, 
   UserCheck, ShieldCheck, Camera, Activity, HeartPulse, Zap, Users,
-  Check, ArrowRight, Shield
+  Check, ArrowRight, Shield, Lock, LogIn, KeyRound
 } from 'lucide-react'
 import ProjectRoadmapModal from './ProjectRoadmapModal'
+import AuthModal from './AuthModal'
 
 export default function SidebarLayout({ children, activeSection, onSelectSection, onRoleSwitch }) {
   const { user, login, logout } = useAuth()
   const navigate = useNavigate()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [isRoadmapOpen, setIsRoadmapOpen] = useState(false)
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false)
+  const [authModalMode, setAuthModalMode] = useState('login')
   const [switchingRole, setSwitchingRole] = useState(false)
 
+  // In-App Logout: Never redirects away to another page!
   const handleLogout = () => {
     logout()
-    navigate('/login')
+    sound.playSnoozeBeep()
+    setAuthModalMode('login')
+    setIsAuthModalOpen(true)
   }
 
-  const role = user?.role?.toUpperCase() || 'PATIENT'
-  const userName = user?.full_name || user?.email?.split('@')[0] || 'User'
+  const role = user?.role?.toUpperCase() || (user ? 'PATIENT' : 'GUEST')
+  const userName = user?.full_name || user?.email?.split('@')[0] || (user ? 'User' : 'Guest')
 
   // Seamless 1-Click Role Switcher for Milestone 1 Review
   const handleRoleSwitch = async (targetRole) => {
@@ -42,6 +48,7 @@ export default function SidebarLayout({ children, activeSection, onSelectSection
       }
       sound.playSuccessChime()
       if (onRoleSwitch) onRoleSwitch(targetRole)
+      setIsAuthModalOpen(false)
     } catch (err) {
       console.error('Role switch failed:', err)
     } finally {
@@ -229,7 +236,7 @@ export default function SidebarLayout({ children, activeSection, onSelectSection
           </div>
         </div>
 
-        {/* Sidebar Footer with Milestone 1 Badge & Log Out */}
+        {/* Sidebar Footer with Milestone 1 Badge & Log Out / Sign In */}
         <div className="p-4 border-t border-white/5 space-y-3">
           <button
             onClick={() => setIsRoadmapOpen(true)}
@@ -245,13 +252,26 @@ export default function SidebarLayout({ children, activeSection, onSelectSection
             <p className="text-[10px] text-slate-400">Core Setup, DB & Auth complete. Click for full roadmap.</p>
           </button>
 
-          <button
-            onClick={handleLogout}
-            className="w-full flex items-center space-x-2.5 px-3.5 py-2 rounded-xl text-xs font-semibold text-rose-400 hover:text-rose-300 hover:bg-rose-500/10 transition-colors"
-          >
-            <LogOut className="w-4 h-4" />
-            <span>Log Out</span>
-          </button>
+          {user ? (
+            <button
+              onClick={handleLogout}
+              className="w-full flex items-center space-x-2.5 px-3.5 py-2.5 rounded-xl text-xs font-semibold text-rose-400 hover:text-rose-300 hover:bg-rose-500/10 transition-colors"
+            >
+              <LogOut className="w-4 h-4" />
+              <span>Log Out</span>
+            </button>
+          ) : (
+            <button
+              onClick={() => {
+                setAuthModalMode('login')
+                setIsAuthModalOpen(true)
+              }}
+              className="w-full flex items-center justify-center space-x-2 px-3.5 py-2.5 rounded-xl text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 shadow-md shadow-blue-500/25 transition-all"
+            >
+              <Lock className="w-4 h-4" />
+              <span>Sign In / Switch User</span>
+            </button>
+          )}
         </div>
       </aside>
 
@@ -336,30 +356,63 @@ export default function SidebarLayout({ children, activeSection, onSelectSection
               </span>
             </div>
 
-            {/* User Profile Avatar with dynamic role color */}
-            <div className="flex items-center space-x-2.5 pl-1">
-              <div className={`w-10 h-10 rounded-2xl text-white flex items-center justify-center font-bold text-sm shadow-md ${
-                role === 'CAREGIVER'
-                  ? 'bg-gradient-to-tr from-emerald-600 to-teal-600 shadow-emerald-500/20'
-                  : role === 'ADMIN'
-                  ? 'bg-gradient-to-tr from-purple-600 to-indigo-600 shadow-purple-500/20'
-                  : 'bg-gradient-to-tr from-blue-600 to-indigo-600 shadow-blue-500/20'
-              }`}>
-                {userName[0]?.toUpperCase()}
-              </div>
-              <div className="hidden sm:block text-left">
-                <div className="text-xs font-bold text-slate-800 leading-tight">{userName}</div>
-                <div className={`text-[10px] font-bold uppercase tracking-wider ${
+            {/* User Profile Avatar / Sign In Button */}
+            {user ? (
+              <div className="flex items-center space-x-2 pl-1">
+                <div className={`w-10 h-10 rounded-2xl text-white flex items-center justify-center font-bold text-sm shadow-md ${
                   role === 'CAREGIVER'
-                    ? 'text-emerald-600'
+                    ? 'bg-gradient-to-tr from-emerald-600 to-teal-600 shadow-emerald-500/20'
                     : role === 'ADMIN'
-                    ? 'text-purple-600'
-                    : 'text-blue-600'
+                    ? 'bg-gradient-to-tr from-purple-600 to-indigo-600 shadow-purple-500/20'
+                    : 'bg-gradient-to-tr from-blue-600 to-indigo-600 shadow-blue-500/20'
                 }`}>
-                  {role}
+                  {userName[0]?.toUpperCase()}
                 </div>
+                <div className="hidden sm:block text-left">
+                  <div className="text-xs font-bold text-slate-800 leading-tight">{userName}</div>
+                  <div className={`text-[10px] font-bold uppercase tracking-wider ${
+                    role === 'CAREGIVER'
+                      ? 'text-emerald-600'
+                      : role === 'ADMIN'
+                      ? 'text-purple-600'
+                      : 'text-blue-600'
+                  }`}>
+                    {role}
+                  </div>
+                </div>
+
+                {/* Quick Log Out Button in Header */}
+                <button
+                  onClick={handleLogout}
+                  className="p-2 rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors ml-1"
+                  title="Log Out & Switch User"
+                >
+                  <LogOut className="w-4 h-4" />
+                </button>
               </div>
-            </div>
+            ) : (
+              <div className="flex items-center space-x-2">
+                <button
+                  onClick={() => {
+                    setAuthModalMode('login')
+                    setIsAuthModalOpen(true)
+                  }}
+                  className="flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-[#5E81F4] text-white text-xs font-bold shadow-md shadow-blue-500/20 hover:bg-blue-600 transition-colors"
+                >
+                  <Lock className="w-3.5 h-3.5" />
+                  <span>Sign In</span>
+                </button>
+                <button
+                  onClick={() => {
+                    setAuthModalMode('register')
+                    setIsAuthModalOpen(true)
+                  }}
+                  className="hidden sm:flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-slate-100 text-slate-700 text-xs font-bold hover:bg-slate-200 transition-colors"
+                >
+                  <span>Register</span>
+                </button>
+              </div>
+            )}
           </div>
         </header>
 
@@ -371,6 +424,16 @@ export default function SidebarLayout({ children, activeSection, onSelectSection
 
       {/* Project Roadmap Modal */}
       <ProjectRoadmapModal isOpen={isRoadmapOpen} onClose={() => setIsRoadmapOpen(false)} />
+
+      {/* In-App Sign In / Register Modal (Never Leaves This UI) */}
+      <AuthModal
+        isOpen={isAuthModalOpen}
+        onClose={() => setIsAuthModalOpen(false)}
+        initialMode={authModalMode}
+        onAuthSuccess={() => {
+          if (onRoleSwitch) onRoleSwitch(user?.role || 'PATIENT')
+        }}
+      />
     </div>
   )
 }

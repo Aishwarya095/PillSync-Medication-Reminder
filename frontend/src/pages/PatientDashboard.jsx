@@ -159,7 +159,7 @@ export default function PatientDashboard() {
   // DATA LOADERS
   // -------------------------------------------------------------
   const loadPatientData = async () => {
-    if (role !== 'PATIENT') return
+    if (!user || role !== 'PATIENT') return
     setPatientLoading(true)
     try {
       const [summaryRes, medsRes, profileRes] = await Promise.all([
@@ -186,6 +186,7 @@ export default function PatientDashboard() {
   }
 
   const loadCaregiverData = async () => {
+    if (!user || role !== 'CAREGIVER') return
     setCaregiverLoading(true)
     try {
       const res = await api.get('/profiles/caregiver')
@@ -204,6 +205,7 @@ export default function PatientDashboard() {
   }
 
   const loadAdminData = async () => {
+    if (!user || role !== 'ADMIN') return
     setAdminLoading(true)
     try {
       const [uRes, pRes, cRes] = await Promise.all([
@@ -227,8 +229,16 @@ export default function PatientDashboard() {
     }
   }
 
-  // Load relevant data whenever role or activeSection changes
+  // Load relevant data whenever role or user changes
   useEffect(() => {
+    if (!user) {
+      setSummary(null)
+      setMedicines([])
+      setPatientProfile(null)
+      setCaregiverProfile(null)
+      setAdminUsers([])
+      return
+    }
     if (role === 'PATIENT') {
       loadPatientData()
     } else if (role === 'CAREGIVER') {
@@ -236,9 +246,10 @@ export default function PatientDashboard() {
     } else if (role === 'ADMIN') {
       loadAdminData()
     }
-  }, [role])
+  }, [role, user])
 
   useEffect(() => {
+    if (!user) return
     if (activeSection === 'caregiver_portal' && role === 'CAREGIVER') {
       loadCaregiverData()
     } else if (activeSection === 'admin_portal' && role === 'ADMIN') {
@@ -246,7 +257,7 @@ export default function PatientDashboard() {
     } else if ((activeSection === 'tracker' || activeSection === 'patient_profile') && role === 'PATIENT') {
       loadPatientData()
     }
-  }, [activeSection])
+  }, [activeSection, user])
 
   // -------------------------------------------------------------
   // PATIENT ACTIONS (DOSE, REFILL, ADD/DELETE MEDICATION)
@@ -437,7 +448,7 @@ export default function PatientDashboard() {
   }
 
   // Display Name Helper
-  const displayName = patientProfile?.full_name || caregiverProfile?.full_name || user?.full_name || 'Suvashini'
+  const displayName = patientProfile?.full_name || caregiverProfile?.full_name || user?.full_name || (user ? 'Suvashini' : 'Guest User')
 
   return (
     <SidebarLayout 
@@ -475,7 +486,7 @@ export default function PatientDashboard() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <div className="text-xs text-slate-400 font-medium">
-            {role === 'PATIENT' ? 'Welcome back,' : role === 'CAREGIVER' ? 'Caregiver Supervision,' : 'System Administrator,'}
+            {!user ? 'Welcome to PillSync,' : role === 'PATIENT' ? 'Welcome back,' : role === 'CAREGIVER' ? 'Caregiver Supervision,' : 'System Administrator,'}
           </div>
           <h1 className="text-2xl sm:text-3xl font-extrabold text-[#0B1437] tracking-tight">
             {displayName}
