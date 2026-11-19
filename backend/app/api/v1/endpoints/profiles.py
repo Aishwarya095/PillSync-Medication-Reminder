@@ -155,6 +155,7 @@ def get_caregiver_profile(
             assigned_list.append(
                 AssignedPatientSummary(
                     patient_profile_id=patient.id,
+                    patient_user_id=patient.user_id,
                     patient_name=patient.full_name,
                     patient_email=patient.user.email if patient.user else "",
                     contact_number=patient.contact_number,

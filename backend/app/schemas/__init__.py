@@ -9,6 +9,16 @@ from backend.app.schemas.profile import (
     CaregiverAssignmentCreate,
     AssignedPatientSummary,
 )
+from backend.app.schemas.medicine import (
+    MedicineCreate,
+    MedicineUpdate,
+    MedicineResponse,
+    MedicineRefill,
+    DoseActionRequest,
+    DoseLogResponse,
+    TodayTimelineItem,
+    TodaySummaryResponse,
+)
 
 __all__ = [
     "UserRegister",
@@ -23,4 +33,12 @@ __all__ = [
     "CaregiverProfileResponse",
     "CaregiverAssignmentCreate",
     "AssignedPatientSummary",
+    "MedicineCreate",
+    "MedicineUpdate",
+    "MedicineResponse",
+    "MedicineRefill",
+    "DoseActionRequest",
+    "DoseLogResponse",
+    "TodayTimelineItem",
+    "TodaySummaryResponse",
 ]

@@ -19,6 +19,8 @@ class User(Base):
     role = relationship("Role", back_populates="users")
     patient_profile = relationship("PatientProfile", back_populates="user", uselist=False, cascade="all, delete-orphan")
     caregiver_profile = relationship("CaregiverProfile", back_populates="user", uselist=False, cascade="all, delete-orphan")
+    medicines = relationship("Medicine", back_populates="user", cascade="all, delete-orphan")
+    dose_logs = relationship("DoseLog", back_populates="user", cascade="all, delete-orphan")
 
     def __repr__(self):
         return f"<User(id={self.id}, email='{self.email}', role_id={self.role_id})>"

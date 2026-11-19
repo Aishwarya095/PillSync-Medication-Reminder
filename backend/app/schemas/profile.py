@@ -59,6 +59,7 @@ class AssignedPatientSummary(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     patient_profile_id: int
+    patient_user_id: Optional[int] = None
     patient_name: str
     patient_email: str
     contact_number: Optional[str] = None
