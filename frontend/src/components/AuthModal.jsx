@@ -3,7 +3,7 @@ import { useAuth } from '../context/AuthContext'
 import { sound } from '../utils/sound'
 import { 
   X, Check, AlertCircle, Lock, Mail, User, Shield, 
-  ArrowRight, Sparkles, CheckCircle2, UserCheck, ShieldCheck
+  ArrowRight, Sparkles, CheckCircle2, UserCheck, ShieldCheck, RotateCcw
 } from 'lucide-react'
 
 export default function AuthModal({ isOpen, onClose, initialMode = 'login', onAuthSuccess }) {
@@ -19,6 +19,14 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'login', onAu
   const [role, setRole] = useState('PATIENT')
 
   if (!isOpen) return null
+
+  // Clear Form Fields
+  const handleClear = () => {
+    setEmail('')
+    setPassword('')
+    setFullName('')
+    setError('')
+  }
 
   // Submit Handler
   const handleSubmit = async (e) => {
@@ -164,7 +172,22 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'login', onAu
             )}
 
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">Email Address *</label>
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="block text-xs font-semibold text-slate-700">Email Address *</label>
+                <button
+                  type="button"
+                  onClick={handleClear}
+                  className={`text-[11px] font-medium flex items-center space-x-1 transition-colors ${
+                    (email || password || fullName)
+                      ? 'text-slate-500 hover:text-blue-600 cursor-pointer font-semibold'
+                      : 'text-slate-300 hover:text-slate-400 cursor-pointer'
+                  }`}
+                  title="Clear input fields"
+                >
+                  <RotateCcw className="w-3 h-3" />
+                  <span>Clear</span>
+                </button>
+              </div>
               <div className="relative">
                 <Mail className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
                 <input
