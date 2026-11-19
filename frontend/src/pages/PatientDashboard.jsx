@@ -68,9 +68,24 @@ export default function PatientDashboard() {
   const { user, login } = useAuth()
   const role = user?.role?.toUpperCase() || 'PATIENT'
 
-  // Active section inside the dark sidebar
-  const [activeSection, setActiveSection] = useState('tracker') 
-  // 'tracker' | 'vitals' | 'patient_profile' | 'caregiver_portal' | 'admin_portal' | 'prescriptions' | 'refill'
+  // Active section automatically defaults to that role's primary view
+  const [activeSection, setActiveSection] = useState(() => {
+    const savedRole = user?.role?.toUpperCase()
+    if (savedRole === 'ADMIN') return 'admin_portal'
+    if (savedRole === 'CAREGIVER') return 'caregiver_portal'
+    return 'tracker'
+  })
+
+  // Synchronize active section whenever role changes
+  useEffect(() => {
+    if (role === 'ADMIN') {
+      setActiveSection('admin_portal')
+    } else if (role === 'CAREGIVER') {
+      setActiveSection('caregiver_portal')
+    } else if (role === 'PATIENT') {
+      setActiveSection('tracker')
+    }
+  }, [role])
 
   // Toast feedback
   const [toastMsg, setToastMsg] = useState('')

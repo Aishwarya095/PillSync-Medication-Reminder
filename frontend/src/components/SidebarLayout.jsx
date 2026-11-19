@@ -33,7 +33,15 @@ export default function SidebarLayout({ children, activeSection, onSelectSection
 
   // Seamless 1-Click Role Switcher for Milestone 1 Review
   const handleRoleSwitch = async (targetRole) => {
-    if (role === targetRole) return
+    // If already in that role, immediately jump to that role's primary home section!
+    if (role === targetRole) {
+      if (targetRole === 'PATIENT' && onSelectSection) onSelectSection('tracker')
+      if (targetRole === 'CAREGIVER' && onSelectSection) onSelectSection('caregiver_portal')
+      if (targetRole === 'ADMIN' && onSelectSection) onSelectSection('admin_portal')
+      setMobileMenuOpen(false)
+      return
+    }
+
     setSwitchingRole(true)
     try {
       if (targetRole === 'PATIENT') {
@@ -57,55 +65,109 @@ export default function SidebarLayout({ children, activeSection, onSelectSection
     }
   }
 
-  // Navigation Links tailored to Milestone 1 & Reference Design
-  const navItems = [
-    {
-      group: 'Clinical Dashboard',
-      items: [
-        { id: 'tracker', label: 'Medication Tracker', icon: LayoutDashboard },
-        { id: 'vitals', label: 'Test Reports & Vitals', icon: Activity },
-      ],
-    },
-    {
-      group: 'Milestone 1 Core Profiles',
-      items: [
-        { 
-          id: 'patient_profile', 
-          label: 'Patient Profile & Conditions', 
-          icon: HeartPulse,
-          badge: role === 'PATIENT' ? 'Active' : null,
-          roleTarget: 'PATIENT'
+  // Role-Specific Dynamic Navigation Menu
+  const getNavItems = () => {
+    if (role === 'ADMIN') {
+      return [
+        {
+          group: 'Admin Console (Milestone 1)',
+          items: [
+            { id: 'admin_portal', label: 'Assign & User Directory', icon: ShieldCheck, badge: 'Main' },
+          ],
         },
-        { 
-          id: 'caregiver_portal', 
-          label: 'Caregiver Supervision', 
-          icon: UserCheck,
-          badge: role === 'CAREGIVER' ? 'Active' : null,
-          roleTarget: 'CAREGIVER'
+        {
+          group: 'Switch Role View',
+          items: [
+            { id: 'caregiver_portal', label: '🩺 Switch to Caregiver View', icon: UserCheck, roleTarget: 'CAREGIVER' },
+            { id: 'tracker', label: '👤 Switch to Patient View', icon: LayoutDashboard, roleTarget: 'PATIENT' },
+          ],
         },
-        { 
-          id: 'admin_portal', 
-          label: 'Admin User Management', 
-          icon: ShieldCheck,
-          badge: role === 'ADMIN' ? 'Active' : null,
-          roleTarget: 'ADMIN'
+        {
+          group: 'Curriculum & Progress',
+          items: [
+            { id: 'roadmap', label: '8-Week Project Roadmap', icon: TrendingUp, badge: 'M1 Done' },
+          ],
         },
-      ],
-    },
-    {
-      group: 'Curriculum & Progress',
-      items: [
-        { id: 'roadmap', label: '8-Week Project Roadmap', icon: TrendingUp, badge: 'M1 Done' },
-      ],
-    },
-    {
-      group: 'Upcoming Modules (Preview)',
-      items: [
-        { id: 'prescriptions', label: 'Prescriptions (AI OCR)', icon: Camera, badge: 'Sprint 3' },
-        { id: 'refill', label: 'Refill Forecast (ML)', icon: Zap, badge: 'Sprint 4' },
-      ],
-    },
-  ]
+        {
+          group: 'Upcoming Modules (Preview)',
+          items: [
+            { id: 'prescriptions', label: 'Prescriptions (AI OCR)', icon: Camera, badge: 'Sprint 3' },
+            { id: 'refill', label: 'Refill Forecast (ML)', icon: Zap, badge: 'Sprint 4' },
+          ],
+        },
+      ]
+    }
+
+    if (role === 'CAREGIVER') {
+      return [
+        {
+          group: 'Caregiver Portal (Milestone 1)',
+          items: [
+            { id: 'caregiver_portal', label: 'Supervised Patients & Adherence', icon: Users, badge: 'Main' },
+          ],
+        },
+        {
+          group: 'Switch Role View',
+          items: [
+            { id: 'tracker', label: '👤 Switch to Patient View', icon: LayoutDashboard, roleTarget: 'PATIENT' },
+            { id: 'admin_portal', label: '🛡️ Switch to Admin Console', icon: ShieldCheck, roleTarget: 'ADMIN' },
+          ],
+        },
+        {
+          group: 'Curriculum & Progress',
+          items: [
+            { id: 'roadmap', label: '8-Week Project Roadmap', icon: TrendingUp, badge: 'M1 Done' },
+          ],
+        },
+        {
+          group: 'Upcoming Modules (Preview)',
+          items: [
+            { id: 'prescriptions', label: 'Prescriptions (AI OCR)', icon: Camera, badge: 'Sprint 3' },
+            { id: 'refill', label: 'Refill Forecast (ML)', icon: Zap, badge: 'Sprint 4' },
+          ],
+        },
+      ]
+    }
+
+    // Default: PATIENT
+    return [
+      {
+        group: 'Clinical Dashboard',
+        items: [
+          { id: 'tracker', label: 'Medication Tracker', icon: LayoutDashboard, badge: 'Main' },
+          { id: 'vitals', label: 'Test Reports & Vitals', icon: Activity },
+        ],
+      },
+      {
+        group: 'Patient Record (Milestone 1)',
+        items: [
+          { id: 'patient_profile', label: 'Profile & Health Conditions', icon: HeartPulse },
+        ],
+      },
+      {
+        group: 'Switch Role View',
+        items: [
+          { id: 'caregiver_portal', label: '🩺 Switch to Caregiver View', icon: UserCheck, roleTarget: 'CAREGIVER' },
+          { id: 'admin_portal', label: '🛡️ Switch to Admin Console', icon: ShieldCheck, roleTarget: 'ADMIN' },
+        ],
+      },
+      {
+        group: 'Curriculum & Progress',
+        items: [
+          { id: 'roadmap', label: '8-Week Project Roadmap', icon: TrendingUp, badge: 'M1 Done' },
+        ],
+      },
+      {
+        group: 'Upcoming Modules (Preview)',
+        items: [
+          { id: 'prescriptions', label: 'Prescriptions (AI OCR)', icon: Camera, badge: 'Sprint 3' },
+          { id: 'refill', label: 'Refill Forecast (ML)', icon: Zap, badge: 'Sprint 4' },
+        ],
+      },
+    ]
+  }
+
+  const navItems = getNavItems()
 
   return (
     <div className="min-h-screen bg-[#F4F7FE] flex">
@@ -219,7 +281,9 @@ export default function SidebarLayout({ children, activeSection, onSelectSection
                       </div>
                       {item.badge && (
                         <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded ${
-                          item.badge === 'Active'
+                          item.badge === 'Main'
+                            ? 'bg-blue-500 text-white'
+                            : item.badge === 'Active'
                             ? 'bg-emerald-500/30 text-emerald-200'
                             : item.badge === 'M1 Done'
                             ? 'bg-emerald-500/20 text-emerald-300'
