@@ -1,19 +1,21 @@
 import React, { useState } from 'react'
-import { Link, useNavigate, useLocation } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
+import { sound } from '../utils/sound'
 import { 
   Pill, LayoutDashboard, FileText, History, TrendingUp, ShieldAlert, 
   Settings, LogOut, Search, Bell, Menu, X, CheckCircle2, Sparkles, 
-  UserCheck, ShieldCheck, Camera, Activity, HeartPulse
+  UserCheck, ShieldCheck, Camera, Activity, HeartPulse, Zap, Users,
+  Check, ArrowRight, Shield
 } from 'lucide-react'
 import ProjectRoadmapModal from './ProjectRoadmapModal'
 
-export default function SidebarLayout({ children, activeSection, onSelectSection }) {
-  const { user, logout } = useAuth()
+export default function SidebarLayout({ children, activeSection, onSelectSection, onRoleSwitch }) {
+  const { user, login, logout } = useAuth()
   const navigate = useNavigate()
-  const location = useLocation()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [isRoadmapOpen, setIsRoadmapOpen] = useState(false)
+  const [switchingRole, setSwitchingRole] = useState(false)
 
   const handleLogout = () => {
     logout()
@@ -23,28 +25,77 @@ export default function SidebarLayout({ children, activeSection, onSelectSection
   const role = user?.role?.toUpperCase() || 'PATIENT'
   const userName = user?.full_name || user?.email?.split('@')[0] || 'User'
 
-  // Navigation Links tailored to the reference design
+  // Seamless 1-Click Role Switcher for Milestone 1 Review
+  const handleRoleSwitch = async (targetRole) => {
+    if (role === targetRole) return
+    setSwitchingRole(true)
+    try {
+      if (targetRole === 'PATIENT') {
+        await login('anu@gmail.com', 'Password123!')
+        if (onSelectSection) onSelectSection('tracker')
+      } else if (targetRole === 'CAREGIVER') {
+        await login('bob_caregiver@example.com', 'CaregiverPassword123!')
+        if (onSelectSection) onSelectSection('caregiver_portal')
+      } else if (targetRole === 'ADMIN') {
+        await login('admin_system@example.com', 'AdminPassword123!')
+        if (onSelectSection) onSelectSection('admin_portal')
+      }
+      sound.playSuccessChime()
+      if (onRoleSwitch) onRoleSwitch(targetRole)
+    } catch (err) {
+      console.error('Role switch failed:', err)
+    } finally {
+      setSwitchingRole(false)
+      setMobileMenuOpen(false)
+    }
+  }
+
+  // Navigation Links tailored to Milestone 1 & Reference Design
   const navItems = [
     {
-      group: 'Dashboard',
+      group: 'Clinical Dashboard',
       items: [
         { id: 'tracker', label: 'Medication Tracker', icon: LayoutDashboard },
         { id: 'vitals', label: 'Test Reports & Vitals', icon: Activity },
-        { id: 'history', label: 'Health History', icon: HeartPulse },
-        { id: 'roadmap', label: 'Monthly Progress & Roadmap', icon: TrendingUp },
       ],
     },
     {
-      group: 'Upcoming Modules',
+      group: 'Milestone 1 Core Profiles',
+      items: [
+        { 
+          id: 'patient_profile', 
+          label: 'Patient Profile & Conditions', 
+          icon: HeartPulse,
+          badge: role === 'PATIENT' ? 'Active' : null,
+          roleTarget: 'PATIENT'
+        },
+        { 
+          id: 'caregiver_portal', 
+          label: 'Caregiver Supervision', 
+          icon: UserCheck,
+          badge: role === 'CAREGIVER' ? 'Active' : null,
+          roleTarget: 'CAREGIVER'
+        },
+        { 
+          id: 'admin_portal', 
+          label: 'Admin User Management', 
+          icon: ShieldCheck,
+          badge: role === 'ADMIN' ? 'Active' : null,
+          roleTarget: 'ADMIN'
+        },
+      ],
+    },
+    {
+      group: 'Curriculum & Progress',
+      items: [
+        { id: 'roadmap', label: '8-Week Project Roadmap', icon: TrendingUp, badge: 'M1 Done' },
+      ],
+    },
+    {
+      group: 'Upcoming Modules (Preview)',
       items: [
         { id: 'prescriptions', label: 'Prescriptions (AI OCR)', icon: Camera, badge: 'Sprint 3' },
-        { id: 'refill', label: 'Refill Prediction', icon: TrendingUp, badge: 'Sprint 4' },
-      ],
-    },
-    {
-      group: 'Platform',
-      items: [
-        { id: 'profile', label: 'Account Profile', icon: Settings },
+        { id: 'refill', label: 'Refill Forecast (ML)', icon: Zap, badge: 'Sprint 4' },
       ],
     },
   ]
@@ -59,14 +110,14 @@ export default function SidebarLayout({ children, activeSection, onSelectSection
         />
       )}
 
-      {/* Dark Sidebar (Matches reference image #0B1437 / #0A1128) */}
+      {/* Dark Sidebar (Matches reference image #0B1437) */}
       <aside
         className={`fixed lg:static top-0 bottom-0 left-0 z-50 w-64 bg-[#0B1437] text-slate-300 flex flex-col justify-between transition-transform duration-300 ease-in-out ${
           mobileMenuOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
         }`}
       >
         <div>
-          {/* Logo Header matching "+ Medic" with Green Cross */}
+          {/* Logo Header matching "+ PillSync" with Green Cross */}
           <div className="h-20 flex items-center justify-between px-6 border-b border-white/5">
             <Link to="/patient" className="flex items-center space-x-2.5">
               <div className="w-8 h-8 rounded-lg bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold text-xl">
@@ -82,10 +133,55 @@ export default function SidebarLayout({ children, activeSection, onSelectSection
             </button>
           </div>
 
+          {/* Quick Role Switcher Inside Mobile / Top Sidebar */}
+          <div className="px-4 pt-4 pb-1">
+            <div className="text-[10px] uppercase font-bold tracking-wider text-slate-400 px-2 mb-2">
+              Active Role Profile
+            </div>
+            <div className="grid grid-cols-3 gap-1 bg-white/5 p-1 rounded-xl border border-white/10">
+              <button
+                onClick={() => handleRoleSwitch('PATIENT')}
+                disabled={switchingRole}
+                className={`py-1.5 px-1 rounded-lg text-[10px] font-bold text-center transition-all ${
+                  role === 'PATIENT'
+                    ? 'bg-[#5E81F4] text-white shadow-xs'
+                    : 'text-slate-400 hover:text-white hover:bg-white/5'
+                }`}
+                title="Patient: Anu"
+              >
+                👤 Patient
+              </button>
+              <button
+                onClick={() => handleRoleSwitch('CAREGIVER')}
+                disabled={switchingRole}
+                className={`py-1.5 px-1 rounded-lg text-[10px] font-bold text-center transition-all ${
+                  role === 'CAREGIVER'
+                    ? 'bg-emerald-600 text-white shadow-xs'
+                    : 'text-slate-400 hover:text-white hover:bg-white/5'
+                }`}
+                title="Caregiver: Bob"
+              >
+                🩺 Carer
+              </button>
+              <button
+                onClick={() => handleRoleSwitch('ADMIN')}
+                disabled={switchingRole}
+                className={`py-1.5 px-1 rounded-lg text-[10px] font-bold text-center transition-all ${
+                  role === 'ADMIN'
+                    ? 'bg-purple-600 text-white shadow-xs'
+                    : 'text-slate-400 hover:text-white hover:bg-white/5'
+                }`}
+                title="Admin: System"
+              >
+                🛡️ Admin
+              </button>
+            </div>
+          </div>
+
           {/* Nav Menu */}
-          <div className="py-6 px-4 space-y-6 overflow-y-auto max-h-[calc(100vh-200px)]">
+          <div className="py-4 px-4 space-y-5 overflow-y-auto max-h-[calc(100vh-250px)]">
             {navItems.map((group, gIdx) => (
-              <div key={gIdx} className="space-y-1.5">
+              <div key={gIdx} className="space-y-1">
                 <div className="text-[10px] uppercase font-bold tracking-wider text-slate-500 px-3">
                   {group.group}
                 </div>
@@ -96,7 +192,12 @@ export default function SidebarLayout({ children, activeSection, onSelectSection
                     <button
                       key={item.id}
                       onClick={() => {
-                        if (onSelectSection) onSelectSection(item.id)
+                        // Auto-switch role if clicking a role-specific profile
+                        if (item.roleTarget && item.roleTarget !== role) {
+                          handleRoleSwitch(item.roleTarget)
+                        } else {
+                          if (onSelectSection) onSelectSection(item.id)
+                        }
                         setMobileMenuOpen(false)
                       }}
                       className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all ${
@@ -107,10 +208,16 @@ export default function SidebarLayout({ children, activeSection, onSelectSection
                     >
                       <div className="flex items-center space-x-3">
                         <Icon className={`w-4 h-4 ${isActive ? 'text-white' : 'text-slate-400'}`} />
-                        <span>{item.label}</span>
+                        <span className="truncate">{item.label}</span>
                       </div>
                       {item.badge && (
-                        <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-purple-500/30 text-purple-200">
+                        <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded ${
+                          item.badge === 'Active'
+                            ? 'bg-emerald-500/30 text-emerald-200'
+                            : item.badge === 'M1 Done'
+                            ? 'bg-emerald-500/20 text-emerald-300'
+                            : 'bg-purple-500/30 text-purple-200'
+                        }`}>
                           {item.badge}
                         </span>
                       )}
@@ -140,7 +247,7 @@ export default function SidebarLayout({ children, activeSection, onSelectSection
 
           <button
             onClick={handleLogout}
-            className="w-full flex items-center space-x-2.5 px-3.5 py-2.5 rounded-xl text-xs font-semibold text-rose-400 hover:text-rose-300 hover:bg-rose-500/10 transition-colors"
+            className="w-full flex items-center space-x-2.5 px-3.5 py-2 rounded-xl text-xs font-semibold text-rose-400 hover:text-rose-300 hover:bg-rose-500/10 transition-colors"
           >
             <LogOut className="w-4 h-4" />
             <span>Log Out</span>
@@ -150,8 +257,8 @@ export default function SidebarLayout({ children, activeSection, onSelectSection
 
       {/* Main Canvas Area */}
       <div className="flex-1 flex flex-col min-w-0 overflow-y-auto">
-        {/* Top Header matching reference (Search, Notifications, Avatar) */}
-        <header className="h-20 bg-white/70 backdrop-blur-md border-b border-slate-200/60 sticky top-0 z-30 px-4 sm:px-8 flex items-center justify-between">
+        {/* Top Header matching reference (Search, Role Switcher, Notifications, Avatar) */}
+        <header className="h-20 bg-white/70 backdrop-blur-md border-b border-slate-200/60 sticky top-0 z-30 px-4 sm:px-8 flex items-center justify-between gap-3">
           <div className="flex items-center space-x-3">
             <button
               onClick={() => setMobileMenuOpen(true)}
@@ -161,7 +268,7 @@ export default function SidebarLayout({ children, activeSection, onSelectSection
             </button>
 
             {/* Rounded Search Bar */}
-            <div className="relative w-48 sm:w-80">
+            <div className="relative w-44 sm:w-64">
               <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
               <input
                 type="text"
@@ -171,8 +278,45 @@ export default function SidebarLayout({ children, activeSection, onSelectSection
             </div>
           </div>
 
+          {/* Center: Milestone 1 Role Switcher (Desktop) */}
+          <div className="hidden md:flex items-center bg-slate-100/90 p-1 rounded-2xl border border-slate-200/80 shadow-xs">
+            <button
+              onClick={() => handleRoleSwitch('PATIENT')}
+              disabled={switchingRole}
+              className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                role === 'PATIENT'
+                  ? 'bg-white text-blue-600 shadow-xs'
+                  : 'text-slate-500 hover:text-slate-900'
+              }`}
+            >
+              <span>👤 Patient (Anu)</span>
+            </button>
+            <button
+              onClick={() => handleRoleSwitch('CAREGIVER')}
+              disabled={switchingRole}
+              className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                role === 'CAREGIVER'
+                  ? 'bg-white text-emerald-600 shadow-xs'
+                  : 'text-slate-500 hover:text-slate-900'
+              }`}
+            >
+              <span>🩺 Caregiver (Bob)</span>
+            </button>
+            <button
+              onClick={() => handleRoleSwitch('ADMIN')}
+              disabled={switchingRole}
+              className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                role === 'ADMIN'
+                  ? 'bg-white text-purple-600 shadow-xs'
+                  : 'text-slate-500 hover:text-slate-900'
+              }`}
+            >
+              <span>🛡️ Admin (System)</span>
+            </button>
+          </div>
+
           {/* User Controls & Bell Notification */}
-          <div className="flex items-center space-x-3.5">
+          <div className="flex items-center space-x-3">
             {/* Roadmap Modal Button */}
             <button
               onClick={() => setIsRoadmapOpen(true)}
@@ -182,7 +326,7 @@ export default function SidebarLayout({ children, activeSection, onSelectSection
               <span>Full Roadmap</span>
             </button>
 
-            {/* Notification Bell with Badge '11' like in photo */}
+            {/* Notification Bell with Badge '11' */}
             <div className="relative cursor-pointer">
               <div className="w-10 h-10 rounded-2xl bg-white border border-slate-200/80 flex items-center justify-center text-slate-600 hover:text-slate-900 shadow-xs">
                 <Bell className="w-4 h-4" />
@@ -192,14 +336,28 @@ export default function SidebarLayout({ children, activeSection, onSelectSection
               </span>
             </div>
 
-            {/* User Profile Avatar */}
-            <div className="flex items-center space-x-2.5 pl-2">
-              <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-600 text-white flex items-center justify-center font-bold text-sm shadow-md shadow-blue-500/20">
+            {/* User Profile Avatar with dynamic role color */}
+            <div className="flex items-center space-x-2.5 pl-1">
+              <div className={`w-10 h-10 rounded-2xl text-white flex items-center justify-center font-bold text-sm shadow-md ${
+                role === 'CAREGIVER'
+                  ? 'bg-gradient-to-tr from-emerald-600 to-teal-600 shadow-emerald-500/20'
+                  : role === 'ADMIN'
+                  ? 'bg-gradient-to-tr from-purple-600 to-indigo-600 shadow-purple-500/20'
+                  : 'bg-gradient-to-tr from-blue-600 to-indigo-600 shadow-blue-500/20'
+              }`}>
                 {userName[0]?.toUpperCase()}
               </div>
-              <div className="hidden md:block text-left">
+              <div className="hidden sm:block text-left">
                 <div className="text-xs font-bold text-slate-800 leading-tight">{userName}</div>
-                <div className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">{role}</div>
+                <div className={`text-[10px] font-bold uppercase tracking-wider ${
+                  role === 'CAREGIVER'
+                    ? 'text-emerald-600'
+                    : role === 'ADMIN'
+                    ? 'text-purple-600'
+                    : 'text-blue-600'
+                }`}>
+                  {role}
+                </div>
               </div>
             </div>
           </div>
