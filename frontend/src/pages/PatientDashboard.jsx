@@ -5,7 +5,8 @@ import { sound } from '../utils/sound'
 import { 
   Pill, Clock, AlertTriangle, CheckCircle2, Plus, RefreshCw, Trash2, Edit3, 
   Search, ShieldAlert, Sparkles, Volume2, Bell, HeartPulse, User, Phone, 
-  Calendar, Droplet, ArrowRight, X, ChevronRight, Check, AlertCircle, Info
+  Calendar, Droplet, ArrowRight, X, ChevronRight, Check, AlertCircle, Info,
+  Camera, TrendingUp, FileText, Brain, Zap, Shield, Bookmark, ExternalLink
 } from 'lucide-react'
 
 // Common Quick Presets for one-click testing
@@ -540,6 +541,21 @@ export default function PatientDashboard() {
             <User className="w-3.5 h-3.5" />
             <span>Health Profile</span>
           </button>
+
+          <button
+            onClick={() => setActiveTab('roadmap')}
+            className={`px-4 py-2 rounded-xl text-xs font-semibold transition-all flex items-center space-x-2 ${
+              activeTab === 'roadmap'
+                ? 'bg-blue-600 text-white shadow-sm shadow-blue-500/20'
+                : 'text-slate-600 hover:bg-slate-100'
+            }`}
+          >
+            <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+            <span>Upcoming Modules & Roadmap</span>
+            <span className="px-1.5 py-0.5 rounded-full bg-indigo-50 text-indigo-700 text-[10px] font-bold border border-indigo-200">
+              Future Weeks
+            </span>
+          </button>
         </div>
 
         {activeTab === 'cabinet' && (
@@ -1014,6 +1030,232 @@ export default function PatientDashboard() {
                 ))}
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* TAB 4: UPCOMING FEATURES & PROJECT ROADMAP */}
+      {activeTab === 'roadmap' && (
+        <div className="space-y-6">
+          {/* Roadmap Intro Banner */}
+          <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 rounded-3xl p-6 sm:p-8 text-white shadow-xl relative overflow-hidden">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div className="space-y-2">
+                <div className="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-300 text-xs font-semibold border border-emerald-500/30">
+                  <CheckCircle2 className="w-3.5 h-3.5" />
+                  <span>Milestone 1 Achieved & Verified</span>
+                </div>
+                <h2 className="text-xl sm:text-2xl font-extrabold tracking-tight">
+                  PillSync Comprehensive Product Vision & Feature Directory
+                </h2>
+                <p className="text-xs text-slate-300 max-w-2xl leading-relaxed">
+                  Milestone 1 is fully delivered with secure authentication, database schemas, and role management.
+                  Below is the planned architecture and exact names of advanced modules scheduled for implementation in upcoming sprints.
+                </p>
+              </div>
+
+              <div className="bg-white/10 backdrop-blur-md rounded-2xl p-4 border border-white/10 text-center shrink-0">
+                <div className="text-2xl font-bold text-emerald-400">100%</div>
+                <div className="text-[11px] font-semibold text-slate-300 uppercase tracking-wider">Milestone 1 Status</div>
+              </div>
+            </div>
+          </div>
+
+          {/* Planned Modules Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+            {/* Module 1: AI Prescription OCR (Sprint 3) */}
+            <div className="bg-white rounded-3xl p-6 border border-purple-200/80 shadow-sm space-y-4 hover:shadow-md transition-all">
+              <div className="flex items-center justify-between">
+                <div className="w-10 h-10 rounded-2xl bg-purple-50 text-purple-600 flex items-center justify-center font-bold">
+                  <Camera className="w-5 h-5" />
+                </div>
+                <span className="text-[10px] uppercase font-bold tracking-wider px-2.5 py-1 rounded-full bg-purple-100 text-purple-800 border border-purple-200">
+                  Upcoming: Sprint 3 (Weeks 5 & 6)
+                </span>
+              </div>
+
+              <div>
+                <h3 className="text-base font-bold text-slate-900">
+                  AI Prescription Scanner & Medication Recognition (OCR)
+                </h3>
+                <p className="text-xs text-slate-500 mt-1">
+                  Computer vision pipeline enabling patients to capture handwritten or printed prescriptions and auto-extract drug data.
+                </p>
+              </div>
+
+              <div className="space-y-2 pt-2 border-t border-slate-100 text-xs">
+                <div className="font-semibold text-slate-700 text-[11px] uppercase tracking-wider">Features Being Introduced:</div>
+                <ul className="space-y-1.5 text-slate-600">
+                  <li className="flex items-center space-x-2">
+                    <span className="w-1.5 h-1.5 rounded-full bg-purple-600" />
+                    <span><strong>Prescription Image Upload & Live Camera Capture</strong></span>
+                  </li>
+                  <li className="flex items-center space-x-2">
+                    <span className="w-1.5 h-1.5 rounded-full bg-purple-600" />
+                    <span><strong>Tesseract OCR & Adaptive Image Filtering</strong></span>
+                  </li>
+                  <li className="flex items-center space-x-2">
+                    <span className="w-1.5 h-1.5 rounded-full bg-purple-600" />
+                    <span><strong>NLP Entity Extraction (Drug Name, Strength, Frequency)</strong></span>
+                  </li>
+                  <li className="flex items-center space-x-2">
+                    <span className="w-1.5 h-1.5 rounded-full bg-purple-600" />
+                    <span><strong>Interactive Doctor Slip Verification Drawer</strong></span>
+                  </li>
+                  <li className="flex items-center space-x-2">
+                    <span className="w-1.5 h-1.5 rounded-full bg-purple-600" />
+                    <span><strong>Pill Bottle Label Barcode Scanner</strong></span>
+                  </li>
+                </ul>
+              </div>
+
+              {/* Mock Preview Visual */}
+              <div className="p-3.5 rounded-2xl bg-purple-50/50 border border-dashed border-purple-300 text-center">
+                <div className="text-[11px] font-semibold text-purple-700">📸 Sprint 3 Preview Zone: Image Recognition Sandbox</div>
+                <div className="text-[10px] text-purple-500 mt-0.5">Drag & drop prescription slip to test recognition pipeline</div>
+              </div>
+            </div>
+
+            {/* Module 2: Refill Forecast & Stock Intelligence (Sprint 4) */}
+            <div className="bg-white rounded-3xl p-6 border border-amber-200/80 shadow-sm space-y-4 hover:shadow-md transition-all">
+              <div className="flex items-center justify-between">
+                <div className="w-10 h-10 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center font-bold">
+                  <TrendingUp className="w-5 h-5" />
+                </div>
+                <span className="text-[10px] uppercase font-bold tracking-wider px-2.5 py-1 rounded-full bg-amber-100 text-amber-800 border border-amber-200">
+                  Upcoming: Sprint 4 (Weeks 6 & 7)
+                </span>
+              </div>
+
+              <div>
+                <h3 className="text-base font-bold text-slate-900">
+                  Smart Refill Prediction & Inventory Burn-Rate Engine
+                </h3>
+                <p className="text-xs text-slate-500 mt-1">
+                  Predictive mathematical forecasting that tracks pill depletion velocity and alerts pharmacies/caregivers before stock runs out.
+                </p>
+              </div>
+
+              <div className="space-y-2 pt-2 border-t border-slate-100 text-xs">
+                <div className="font-semibold text-slate-700 text-[11px] uppercase tracking-wider">Features Being Introduced:</div>
+                <ul className="space-y-1.5 text-slate-600">
+                  <li className="flex items-center space-x-2">
+                    <span className="w-1.5 h-1.5 rounded-full bg-amber-600" />
+                    <span><strong>Mathematical Daily Burn Rate Algorithm</strong></span>
+                  </li>
+                  <li className="flex items-center space-x-2">
+                    <span className="w-1.5 h-1.5 rounded-full bg-amber-600" />
+                    <span><strong>Predictive Calendar Stock Depletion Forecasting</strong></span>
+                  </li>
+                  <li className="flex items-center space-x-2">
+                    <span className="w-1.5 h-1.5 rounded-full bg-amber-600" />
+                    <span><strong>Automated 5-Day Low-Stock Refill Alert Triggers</strong></span>
+                  </li>
+                  <li className="flex items-center space-x-2">
+                    <span className="w-1.5 h-1.5 rounded-full bg-amber-600" />
+                    <span><strong>One-Click Pharmacy Refill Order Request</strong></span>
+                  </li>
+                </ul>
+              </div>
+
+              {/* Mathematical Formula Preview */}
+              <div className="p-3.5 rounded-2xl bg-amber-50/60 border border-amber-200 text-xs font-mono text-amber-900">
+                <div className="text-[10px] uppercase font-bold tracking-wider text-amber-700 mb-1">Consumption Formula:</div>
+                <div>Days Remaining = Current Stock / (Doses per Day × Pills per Dose)</div>
+              </div>
+            </div>
+
+            {/* Module 3: Drug-Drug Interaction Safety (Innovation Backlog) */}
+            <div className="bg-white rounded-3xl p-6 border border-rose-200/80 shadow-sm space-y-4 hover:shadow-md transition-all">
+              <div className="flex items-center justify-between">
+                <div className="w-10 h-10 rounded-2xl bg-rose-50 text-rose-600 flex items-center justify-center font-bold">
+                  <ShieldAlert className="w-5 h-5" />
+                </div>
+                <span className="text-[10px] uppercase font-bold tracking-wider px-2.5 py-1 rounded-full bg-rose-100 text-rose-800 border border-rose-200">
+                  Upcoming: Clinical Safety (Week 8)
+                </span>
+              </div>
+
+              <div>
+                <h3 className="text-base font-bold text-slate-900">
+                  Drug-Drug & Food-Drug Interaction Safety Engine
+                </h3>
+                <p className="text-xs text-slate-500 mt-1">
+                  Guarding patients against severe polypharmacy adverse events by checking contraindicated medications against FDA/RxNorm databases.
+                </p>
+              </div>
+
+              <div className="space-y-2 pt-2 border-t border-slate-100 text-xs">
+                <div className="font-semibold text-slate-700 text-[11px] uppercase tracking-wider">Features Being Introduced:</div>
+                <ul className="space-y-1.5 text-slate-600">
+                  <li className="flex items-center space-x-2">
+                    <span className="w-1.5 h-1.5 rounded-full bg-rose-600" />
+                    <span><strong>Polypharmacy Cross-Check via RxNorm / OpenFDA API</strong></span>
+                  </li>
+                  <li className="flex items-center space-x-2">
+                    <span className="w-1.5 h-1.5 rounded-full bg-rose-600" />
+                    <span><strong>Severity Alert Badges (Mild, Moderate, Severe Contraindication)</strong></span>
+                  </li>
+                  <li className="flex items-center space-x-2">
+                    <span className="w-1.5 h-1.5 rounded-full bg-rose-600" />
+                    <span><strong>Dietary & Food Contraindication Warnings (e.g. Grapefruit, Dairy)</strong></span>
+                  </li>
+                </ul>
+              </div>
+
+              <div className="p-3.5 rounded-2xl bg-rose-50/60 border border-rose-200 text-xs text-rose-900 flex items-center space-x-2">
+                <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0" />
+                <span>Automated safety check runs whenever a new medication is added.</span>
+              </div>
+            </div>
+
+            {/* Module 4: Adherence Analytics & Clinical Reports (Sprint 4) */}
+            <div className="bg-white rounded-3xl p-6 border border-blue-200/80 shadow-sm space-y-4 hover:shadow-md transition-all">
+              <div className="flex items-center justify-between">
+                <div className="w-10 h-10 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center font-bold">
+                  <FileText className="w-5 h-5" />
+                </div>
+                <span className="text-[10px] uppercase font-bold tracking-wider px-2.5 py-1 rounded-full bg-blue-100 text-blue-800 border border-blue-200">
+                  Upcoming: Analytics (Weeks 7 & 8)
+                </span>
+              </div>
+
+              <div>
+                <h3 className="text-base font-bold text-slate-900">
+                  Adherence Analytics & Doctor Consultation Reports
+                </h3>
+                <p className="text-xs text-slate-500 mt-1">
+                  Visual compliance trends, missed-dose escalation alerts, and one-click PDF health report generation for physician visits.
+                </p>
+              </div>
+
+              <div className="space-y-2 pt-2 border-t border-slate-100 text-xs">
+                <div className="font-semibold text-slate-700 text-[11px] uppercase tracking-wider">Features Being Introduced:</div>
+                <ul className="space-y-1.5 text-slate-600">
+                  <li className="flex items-center space-x-2">
+                    <span className="w-1.5 h-1.5 rounded-full bg-blue-600" />
+                    <span><strong>7-Day & 30-Day Medication Adherence Line/Bar Charts</strong></span>
+                  </li>
+                  <li className="flex items-center space-x-2">
+                    <span className="w-1.5 h-1.5 rounded-full bg-blue-600" />
+                    <span><strong>Caregiver Emergency Escalation via SMS / Push Notification</strong></span>
+                  </li>
+                  <li className="flex items-center space-x-2">
+                    <span className="w-1.5 h-1.5 rounded-full bg-blue-600" />
+                    <span><strong>One-Click PDF Clinical Intake Report Generator</strong></span>
+                  </li>
+                  <li className="flex items-center space-x-2">
+                    <span className="w-1.5 h-1.5 rounded-full bg-blue-600" />
+                    <span><strong>Caregiver Multi-Patient Remote Adherence Dashboard</strong></span>
+                  </li>
+                </ul>
+              </div>
+
+              <div className="p-3.5 rounded-2xl bg-blue-50/60 border border-blue-200 text-xs text-blue-900 flex items-center space-x-2">
+                <CheckCircle2 className="w-4 h-4 text-blue-600 shrink-0" />
+                <span>Generates exportable clinical logs formatted for doctors & clinics.</span>
+              </div>
+            </div>
           </div>
         </div>
       )}
